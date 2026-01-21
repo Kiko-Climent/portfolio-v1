@@ -31,7 +31,7 @@ export const projects = {
     johnny: {
       id: 'johnny',
       imagesPath: '/johnny',
-      imagesCount: 0,
+      imagesCount: 13,
       gridLayout: [null, null, 1, null, null, 2,
         null, 3, null, 4, null, null,
         6, { type: 'video', src: '/motion/promojohnny.mp4' }, null, 5, null, 7,
@@ -61,7 +61,7 @@ export const projects = {
     alt: {
       id: 'alt',
       imagesPath: '/alt',
-      imagesCount: 0,
+      imagesCount: 8,
       gridLayout: [],
       slider: {
         images: [
@@ -83,7 +83,7 @@ export const projects = {
     acid: {
       id: 'acid',
       imagesPath: '/acid',
-      imagesCount: 0,
+      imagesCount: 8,
       gridLayout: [],
       slider: {
         images: [

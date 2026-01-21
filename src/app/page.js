@@ -8,6 +8,7 @@ import Footer3 from '@/components/footer/index3';
 import ProjectImageSlider from '@/components/sliders/ProjectImageSlider';
 import { projects } from '@/components/data/projects';
 import ProjectGrid from '@/components/grids';
+import ProjectImageSliderThree from '@/components/sliders/ProjectImageSliderThree';
 
 
 export default function Home() {
@@ -39,7 +40,7 @@ export default function Home() {
       <Navbar />
       {/* Grid del portfolio con todas las imágenes */}
       <PortfolioGridThree activeProject={activeProject} clickedProject={clickedProject} />
-      {selectedProject && <ProjectImageSlider project={selectedProject} />}
+      {selectedProject && <ProjectImageSliderThree project={selectedProject} />}
       <Footer3 
         onHover={setActiveProject} 
         onProjectClick={handleProjectClick} 
