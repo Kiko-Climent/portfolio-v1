@@ -2,49 +2,85 @@
 
 import { useState, useEffect } from 'react';
 import Navbar from "@/components/navbar";
-
-import PortfolioGridThree from '@/components/grids/index3';
+import NavbarMobile from "@/components/navbar/NavbarMobile";
 import Footer3 from '@/components/footer/index3';
-import ProjectImageSlider from '@/components/sliders/ProjectImageSlider';
+import FooterMobile from '@/components/footer/FooterMobile';
+import BackgroundMobile from '@/components/backgroundMobile/index';
+import PortfolioGridThree from '@/components/grids/index3';
 import { projects } from '@/components/data/projects';
-import ProjectGrid from '@/components/grids';
 import ProjectImageSliderThree from '@/components/sliders/ProjectImageSliderThree';
+import ProjectImageSliderMobile from '@/components/sliders/ProjectImageSliderMobile';
+import HoverImageSlider from '@/components/sliders/index';
 
 
 export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
   const [clickedProject, setClickedProject] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar si es móvil o desktop
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const selectedProject = clickedProject ? projects[clickedProject] : null;
+  const hoveredProject = activeProject && !clickedProject ? projects[activeProject] : null;
 
   // Cuando se hace click en un proyecto, primero ocultar el grid y luego mostrar el slider
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
-      // Si es null, cerrar el slider y resetear todo
       setClickedProject(null);
       setActiveProject(null);
       return;
     }
     
-    // Primero ocultar el grid (esto activará la animación de salida)
     setActiveProject(null);
     
-    // Luego, después del tiempo de animación de salida del grid, mostrar el slider
     setTimeout(() => {
       setClickedProject(projectId);
-    }, 600); // Tiempo que tarda la animación de salida en RevealImageHover (0.6s)
+    }, 600);
   };
 
   return (
     <div className="h-screen w-screen relative overflow-hidden">
-      <Navbar />
-      {/* Grid del portfolio con todas las imágenes */}
-      <PortfolioGridThree activeProject={activeProject} clickedProject={clickedProject} />
-      {selectedProject && <ProjectImageSliderThree project={selectedProject} />}
-      <Footer3 
-        onHover={setActiveProject} 
-        onProjectClick={handleProjectClick} 
-      />
+      {/* Navbar condicional */}
+      {isMobile ? <NavbarMobile /> : <Navbar />}
+      
+      {/* Background/Grid condicional por dispositivo */}
+      {isMobile ? (
+        <BackgroundMobile />
+      ) : (
+        <PortfolioGridThree activeProject={activeProject} clickedProject={clickedProject} />
+      )}
+      
+      {/* Slider cuando se hace click en un proyecto - condicional por dispositivo */}
+      {selectedProject && (
+        isMobile ? (
+          <ProjectImageSliderMobile project={selectedProject} />
+        ) : (
+          <ProjectImageSliderThree project={selectedProject} />
+        )
+      )}
+      
+      {/* Slider cuando se hace hover sobre un título del footer (solo desktop) */}
+      {!isMobile && hoveredProject && <HoverImageSlider project={hoveredProject} />}
+      
+      {/* Footer condicional */}
+      {isMobile ? (
+        <FooterMobile onProjectClick={handleProjectClick} />
+      ) : (
+        <Footer3 
+          onHover={setActiveProject} 
+          onProjectClick={handleProjectClick} 
+        />
+      )}
     </div>
   );
 }

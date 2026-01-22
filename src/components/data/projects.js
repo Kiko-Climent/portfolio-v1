@@ -38,7 +38,7 @@ export const projects = {
       ],
       slider: {
         images: [
-          { id: 1, top: '25%', left: '5%', width: '70%' },
+          { id: 1, top: '25%', left: '5%', width: '75%' },
           { id: 2, top: '10%', left: '20%', width: '70%' },
           { id: 3, top: '30%', left: '10%', width: '75%' },
           { id: 4, top: '25%', left: '15%', width: '65%' },

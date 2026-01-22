@@ -2,26 +2,17 @@
 
 import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
-const images = [
-    { id: 1, top: '0%', left: '0%', width: '70%' },
-    { id: 2, top: '35%', left: '35%', width: '70%' },
-    { id: 3, top: '25%', left: '10%', width: '70%' },
-    { id: 4, top: '10%', left: '20%', width: '75%' },
-    { id: 5, top: '5%', left: '3%', width: '70%' },
-    { id: 6, top: '15%', left: '10%', width: '80%' },
-    { id: 7, top: '10%', left: '15%', width: '80%' },
-    { id: 8, top: '10%', left: '0%', width: '35%' },
-    { id: 9, top: '20%', left: '25%', width: '25%' },
-    { id: 10, top: '0%', left: '45%', width: '35%' },
-    { id: 11, top: '15%', left: '30%', width: '30%' }
-];
+export default function HoverImageSlider({ project }) {
+    const { isDarkMode } = useDarkMode();
+    if (!project || !project.slider) return null;
 
-export default function SalonImageSlider() {
+    const { images = [], text } = project.slider;
+    
+    // Si no hay imágenes, no mostrar el slider
+    if (!images.length) return null;
     const [navbarHeight, setNavbarHeight] = useState(0);
-    const [isManualMode, setIsManualMode] = useState(false);
-    const [currentIndex, setCurrentIndex] = useState(0);
-
     const imagesRef = useRef([]);
     const timelineRef = useRef(null);
 
@@ -76,11 +67,12 @@ export default function SalonImageSlider() {
             clearTimeout(timeoutId);
             timelineRef.current?.kill();
         };
-    }, []);
+    }, [images.length]);
 
     /* ---------------- INTERACTIONS ---------------- */
 
     const handleMouseEnter = () => {
+        setIsHovering(true);
         if (!timelineRef.current) return;
 
         timelineRef.current.pause();
@@ -96,19 +88,19 @@ export default function SalonImageSlider() {
         gsap.set(imgs[index], { opacity: 1 });
     };
 
-    const handleClick = () => {
-        setIsManualMode(true);
-
-        const next = (currentIndex + 1) % images.length;
-        setCurrentIndex(next);
-
-        const imgs = imagesRef.current.filter(Boolean);
-        gsap.set(imgs, { opacity: 0 });
-        gsap.set(imgs[next], { opacity: 1 });
+    const handleMouseMove = (e) => {
+        if (interactiveAreaRef.current) {
+            const rect = interactiveAreaRef.current.getBoundingClientRect();
+            setCursorPosition({
+                x: e.clientX,
+                y: e.clientY
+            });
+        }
     };
 
+
     const handleMouseLeave = () => {
-        setIsManualMode(false);
+        setIsHovering(false);
 
         if (timelineRef.current) {
             timelineRef.current.kill();
@@ -130,43 +122,31 @@ export default function SalonImageSlider() {
 
     return (
         <div className="flex absolute w-full h-screen">
-            <div className='w-1/2'>
-
-                <div className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
-                    <span className="text-black">vilarnau.de</span>{' '}
-                    <span className="text-gray-500 lowercase">
-                        Hair salon, Web & Interaction, Clean Layout, Fast Motion, Minimal Storytelling,
-                        Layered UI, Fluid Scroll, Modern Typography, Headless Tech,
-                        Next.js, GSAP, Framer Motion, Vercel, TailwindCSS, Motion UI, Responsive.
-                        
-                    </span>
+            <div className='w-1/2'></div>
+            
+            <div className="relative w-1/2">
+                
+                {/* Contenedor de imágenes que ocupa todo el espacio */}
+                <div className="relative w-full h-full pointer-events-none">
+                    {images.map((img, i) => (
+                        <img
+                            key={img.id}
+                            ref={(el) => (imagesRef.current[i] = el)}
+                            src={`${project.imagesPath}/${project.id}${img.id}.png`}
+                            alt={`${project.id} ${img.id}`}
+                            className="absolute object-contain will-change-opacity"
+                            style={{
+                                top: calculateTop(img.top),
+                                left: img.left,
+                                width: img.width,
+                                opacity: 0
+                            }}
+                        />
+                    ))}
                 </div>
             </div>
             
-
-
-            <div
-                className="relative w-1/2 cursor-pointer"
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                onClick={handleClick}
-            >
-                {images.map((img, i) => (
-                    <img
-                        key={img.id}
-                        ref={(el) => (imagesRef.current[i] = el)}
-                        src={`/salon/salon${img.id}.png`}
-                        alt={`Salon ${img.id}`}
-                        className="absolute object-contain will-change-opacity"
-                        style={{
-                            top: calculateTop(img.top),
-                            left: img.left,
-                            width: img.width,
-                            opacity: 0
-                        }}
-                    />
-                ))}
-            </div>
         </div>
     );
 }
+
