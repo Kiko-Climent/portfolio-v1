@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { projects } from '@/components/data/projects';
 import WaveImage from '@/components/tools/WaveImage';
 
-export default function PortfolioGridThree({ activeProject, clickedProject }) {
+export default function PortfolioGridThree({ activeProject, clickedProject, isVisible = true }) {
   const images = [];
 
   // Johnny: índices 0-12 (13 imágenes)
@@ -31,11 +31,32 @@ export default function PortfolioGridThree({ activeProject, clickedProject }) {
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [availableHeight, setAvailableHeight] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [startAnimation, setStartAnimation] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(false); // ⭐ NUEVO
+
+  // ⭐ GENERAR DELAYS ALEATORIOS
+  const randomDelays = useMemo(() => {
+    const indices = Array.from({ length: images.length }, (_, i) => i);
+    
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    
+    const delays = new Array(images.length);
+    indices.forEach((originalIndex, newPosition) => {
+      delays[originalIndex] = newPosition * (100 + Math.random() * 100);
+    });
+    
+    return delays;
+  }, [images.length]);
 
   useEffect(() => {
     const updateHeight = () => {
       const navbar = document.querySelector('[data-navbar]');
-      if (!navbar) return;
+      if (!navbar) {
+        return false;
+      }
 
       const navbarHeightValue = navbar.offsetHeight;
       const topOffset = 16;
@@ -44,20 +65,56 @@ export default function PortfolioGridThree({ activeProject, clickedProject }) {
       const height =
         window.innerHeight - navbarHeightValue - topOffset - bottomOffset;
 
-      console.log('🔍 UPDATE HEIGHT CALLED');
-      console.log('Navbar offsetHeight:', navbarHeightValue);
-      console.log('Calculated available height:', height);
-
       setAvailableHeight(height);
       setNavbarHeight(navbarHeightValue);
       setViewportWidth(window.innerWidth);
+      return true;
     };
 
-    updateHeight();
+    let retryCount = 0;
+    const maxRetries = 20;
+    const retryInterval = 100;
+
+    const tryUpdate = () => {
+      const success = updateHeight();
+      
+      if (!success && retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(tryUpdate, retryInterval);
+      }
+    };
+
+    if (isVisible) {
+      setTimeout(tryUpdate, 0);
+    }
+
     window.addEventListener('resize', updateHeight);
 
     return () => window.removeEventListener('resize', updateHeight);
-  }, []);
+  }, [isVisible]);
+
+  // ⭐ INICIAR ANIMACIÓN DESPUÉS DE 500ms
+  useEffect(() => {
+    if (isVisible && !startAnimation) {
+      const timer = setTimeout(() => {
+        setStartAnimation(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, startAnimation]);
+
+  // ⭐ MARCAR ANIMACIÓN COMO COMPLETA
+  useEffect(() => {
+    if (startAnimation && !animationComplete) {
+      const maxDelay = Math.max(...randomDelays);
+      const timer = setTimeout(() => {
+        setAnimationComplete(true);
+      }, maxDelay + 700); // maxDelay + duración de la transición
+      
+      return () => clearTimeout(timer);
+    }
+  }, [startAnimation, animationComplete, randomDelays]);
 
   const calculateTop = (topPercent) => {
     if (!navbarHeight || !availableHeight) return topPercent;
@@ -95,35 +152,37 @@ export default function PortfolioGridThree({ activeProject, clickedProject }) {
   const hoveredImageConfig = getHoveredImageConfig();
   const imageDimensions = hoveredImageConfig ? getImageDimensions(hoveredImageConfig) : null;
 
-  if (availableHeight === null) return null;
+  if (availableHeight === null) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center text-white">
+      </div>
+    );
+  }
 
   const isHidden = clickedProject !== null;
 
-  // ✅ Posición fija en esquina superior derecha
   const navbar = document.querySelector('[data-navbar]');
   const actualNavbarHeight = navbar?.offsetHeight || 0;
-  
-  console.log('🎯 RENDER - Navbar height (state):', navbarHeight);
-  console.log('🎯 RENDER - Navbar height (actual DOM):', actualNavbarHeight);
-  console.log('🎯 RENDER - Hovered image:', hoveredImage);
 
   const waveImagePosition = {
     position: 'fixed',
-    top: `${actualNavbarHeight +16}px`,
+    top: `${actualNavbarHeight + 16}px`,
     right: '1rem',
     transform: 'none'
   };
+
+  const finalOpacity = isVisible ? (isHidden ? 0 : 1) : 0;
 
   return (
     <>
       <div
         className="absolute left-4 right-4 box-border transition-all duration-700 ease-in-out"
         style={{
-          top: `${document.querySelector('[data-navbar]')?.offsetHeight + 16}px`,
+          top: `${actualNavbarHeight + 16}px`,
           height: `${availableHeight}px`,
-          opacity: isHidden ? 0 : 1,
+          opacity: finalOpacity,
           transform: isHidden ? 'translateX(100%)' : 'translateX(0)',
-          pointerEvents: isHidden ? 'none' : 'auto',
+          pointerEvents: (isHidden || !isVisible) ? 'none' : 'auto',
         }}
       >
         <div
@@ -132,7 +191,7 @@ export default function PortfolioGridThree({ activeProject, clickedProject }) {
             h-full
             grid
             grid-cols-6
-            gap-2
+            gap-4
             content-start
           "
         >
@@ -142,18 +201,35 @@ export default function PortfolioGridThree({ activeProject, clickedProject }) {
             const opacity = isProjectActive ? 1 : 0.6;
             const blur = isProjectActive ? 0 : '4px';
             
+            const animationDelay = randomDelays[index];
+            
             return (
               <div
                 key={index}
-                className="w-full overflow-hidden flex justify-center transition-all duration-300 ease-in-out"
-                style={{ opacity, filter: `blur(${blur})` }}
+                className={`
+                  w-full
+                  h-auto
+                  overflow-hidden
+                  flex
+                  justify-center
+                  items-start
+                  ${animationComplete ? 'transition-all duration-300' : ''}
+                `}
+                style={{ 
+                  opacity: startAnimation ? opacity : 0,
+                  filter: `blur(${blur})`,
+                  // ⭐ SOLO APLICAR DELAY DURANTE LA ANIMACIÓN INICIAL
+                  ...(!animationComplete && {
+                    transition: `opacity 0.7s ease-in ${animationDelay}ms`
+                  })
+                }}
                 onMouseEnter={() => setHoveredImage(image)}
                 onMouseLeave={() => setHoveredImage(null)}
               >
                 <img
                   src={image.src}
                   alt={`Portfolio image ${index + 1}`}
-                  className="w-full h-auto object-contain block"
+                  className="max-w-full max-h-full object-contain block"
                 />
               </div>
             );
@@ -161,8 +237,7 @@ export default function PortfolioGridThree({ activeProject, clickedProject }) {
         </div>
       </div>
 
-      {/* WaveImage fuera del contenedor principal para evitar heredar offset */}
-      {hoveredImageConfig && imageDimensions && (
+      {hoveredImageConfig && imageDimensions && isVisible && (
         <WaveImage
           src={`${hoveredImageConfig.project.imagesPath}/${hoveredImageConfig.project.id}${hoveredImageConfig.id}.png`}
           alt={`Preview ${hoveredImageConfig.project.id} ${hoveredImageConfig.id}`}

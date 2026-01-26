@@ -6,15 +6,23 @@ import { useDarkMode } from '@/contexts/DarkModeContext';
 
 export default function HoverImageSlider({ project }) {
     const { isDarkMode } = useDarkMode();
+    
+    // ⭐ AGREGAR TODOS LOS ESTADOS FALTANTES
+    const [navbarHeight, setNavbarHeight] = useState(0);
+    const [isHovering, setIsHovering] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+    
+    const imagesRef = useRef([]);
+    const timelineRef = useRef(null);
+    const interactiveAreaRef = useRef(null);
+    
     if (!project || !project.slider) return null;
 
     const { images = [], text } = project.slider;
     
     // Si no hay imágenes, no mostrar el slider
     if (!images.length) return null;
-    const [navbarHeight, setNavbarHeight] = useState(0);
-    const imagesRef = useRef([]);
-    const timelineRef = useRef(null);
 
     /* ---------------- NAVBAR HEIGHT ---------------- */
 
@@ -98,7 +106,6 @@ export default function HoverImageSlider({ project }) {
         }
     };
 
-
     const handleMouseLeave = () => {
         setIsHovering(false);
 
@@ -121,13 +128,13 @@ export default function HoverImageSlider({ project }) {
     /* ---------------- RENDER ---------------- */
 
     return (
-        <div className="flex absolute w-full h-screen">
+        <div className="flex absolute w-full h-screen top-0 left-0 pointer-events-none">
             <div className='w-1/2'></div>
             
             <div className="relative w-1/2">
                 
                 {/* Contenedor de imágenes que ocupa todo el espacio */}
-                <div className="relative w-full h-full pointer-events-none">
+                <div className="relative w-full h-full">
                     {images.map((img, i) => (
                         <img
                             key={img.id}
@@ -149,4 +156,3 @@ export default function HoverImageSlider({ project }) {
         </div>
     );
 }
-

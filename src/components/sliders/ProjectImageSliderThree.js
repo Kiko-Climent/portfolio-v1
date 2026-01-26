@@ -4,19 +4,32 @@ import { useEffect, useState } from 'react';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 import SliderThree from '@/components/SliderThree/index';
 
-export default function ProjectImageSliderThree({ project }) {
+export default function ProjectImageSliderThree({ project, shouldHide = false }) {
     const { isDarkMode } = useDarkMode();
+    const [isVisible, setIsVisible] = useState(false);
     
     if (!project || !project.slider) return null;
 
     const { images = [], text } = project.slider;
     
-    // Si no hay imágenes, no mostrar el slider
     if (!images.length) return null;
 
     const [navbarHeight, setNavbarHeight] = useState(0);
 
-    /* ---------------- NAVBAR HEIGHT ---------------- */
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsVisible(true);
+        }, 50);
+        
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (shouldHide) {
+            setIsVisible(false);
+        }
+    }, [shouldHide]);
+
     useEffect(() => {
         const updateNavbarHeight = () => {
             const navbar = document.querySelector('[data-navbar]');
@@ -30,10 +43,14 @@ export default function ProjectImageSliderThree({ project }) {
         return () => window.removeEventListener('resize', updateNavbarHeight);
     }, []);
 
-    /* ---------------- RENDER ---------------- */
     return (
-        <div className="flex absolute w-full h-screen" style={{ zIndex: 10 }}>
-            {/* INFO DEL PROYECTO - IZQUIERDA */}
+        <div 
+            className="fixed top-0 left-0 w-full h-screen flex z-10 transition-opacity"
+            style={{ 
+              opacity: isVisible ? 1 : 0,
+              transitionDuration: '0.8s' // ⭐ MISMO TIMING QUE LA ANIMACIÓN DEL FOOTER
+            }}
+        >
             <div className='w-1/2'>
                 <div className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
                     <span style={{ color: isDarkMode ? 'white' : 'black' }}>
@@ -48,7 +65,6 @@ export default function ProjectImageSliderThree({ project }) {
                 </div>
             </div>
 
-            {/* SLIDER THREE.JS - DERECHA */}
             <div className="relative w-1/2 h-screen" style={{ minHeight: '100vh' }}>
                 <SliderThree 
                     images={images}

@@ -86,6 +86,11 @@ export default function FooterMobile({ onProjectClick }) {
 
   // Función para volver al menú inicial
   const handleBack = () => {
+    // ⭐ NOTIFICAR QUE EMPIEZA EL BACK (ocultar slider)
+    if (window.__footerBackStarted) {
+      window.__footerBackStarted();
+    }
+
     // Ocultar el botón de back letra por letra
     const backButtonSplit = splitInstances.current[`back-button`];
     if (backButtonSplit && backButtonRef.current) {
@@ -131,50 +136,53 @@ export default function FooterMobile({ onProjectClick }) {
           }
           delete splitInstances.current[`back-button`];
           
-          // Restaurar el menú
-          items.forEach(({ number: itemNumber }, index) => {
-            const titleSplit = splitInstances.current[`title-${itemNumber}`];
-            const numberSplit = splitInstances.current[`number-${itemNumber}`];
-            const titleEl = titleRefs.current[itemNumber];
-            const numberEl = numberRefs.current[itemNumber];
-            const containerEl = titleEl?.parentElement;
-
-            if (titleSplit && numberSplit && containerEl) {
-              // Mostrar el contenedor
-              gsap.set(containerEl, { display: 'flex' });
-
-              // Animar chars del título y caracteres del número de vuelta
-              const allChars = [...titleSplit.chars, ...numberSplit.chars];
-              
-              // Delay inverso para que aparezcan en orden inverso
-              const reverseDelay = (items.length - 1 - index) * 0.3;
-              
-              gsap.fromTo(allChars,
-                { x: '100vw' },
-                {
-                  x: 0,
-                  opacity: 1,
-                  duration: 1.5,
-                  ease: 'power2.out',
-                  stagger: {
-                    amount: 0.8,
-                    from: 'end',
-                  },
-                  delay: reverseDelay
-                }
-              );
-            }
-          });
-
-          // Resetear el estado después de un delay
+          // ⭐ ESPERAR A QUE EL SLIDER DESAPAREZCA (800ms) ANTES DE MOSTRAR LOS TÍTULOS
           setTimeout(() => {
-            setClickedNumber(null);
-            
-            // Notificar al componente padre que se cerró el proyecto
-            if (onProjectClick) {
-              onProjectClick(null);
-            }
-          }, 2000);
+            // Restaurar el menú
+            items.forEach(({ number: itemNumber }, index) => {
+              const titleSplit = splitInstances.current[`title-${itemNumber}`];
+              const numberSplit = splitInstances.current[`number-${itemNumber}`];
+              const titleEl = titleRefs.current[itemNumber];
+              const numberEl = numberRefs.current[itemNumber];
+              const containerEl = titleEl?.parentElement;
+
+              if (titleSplit && numberSplit && containerEl) {
+                // Mostrar el contenedor
+                gsap.set(containerEl, { display: 'flex' });
+
+                // Animar chars del título y caracteres del número de vuelta
+                const allChars = [...titleSplit.chars, ...numberSplit.chars];
+                
+                // Delay inverso para que aparezcan en orden inverso
+                const reverseDelay = (items.length - 1 - index) * 0.3;
+                
+                gsap.fromTo(allChars,
+                  { x: '100vw' },
+                  {
+                    x: 0,
+                    opacity: 1,
+                    duration: 1.5,
+                    ease: 'power2.out',
+                    stagger: {
+                      amount: 0.8,
+                      from: 'end',
+                    },
+                    delay: reverseDelay
+                  }
+                );
+              }
+            });
+
+            // Resetear el estado después de un delay
+            setTimeout(() => {
+              setClickedNumber(null);
+              
+              // Notificar al componente padre que se cerró el proyecto
+              if (onProjectClick) {
+                onProjectClick(null);
+              }
+            }, 2000);
+          }, 800); // ⭐ Esperar 800ms (duración del fade out del slider)
         }
       });
     }
@@ -314,54 +322,64 @@ export default function FooterMobile({ onProjectClick }) {
             ease: 'power1.inOut',
             delay: reducedDelay + getStaggerDelay(index, chars.length),
             onComplete: () => {
-              // Mostrar el botón de back cuando termine la última letra del título
-              if (index === chars.length - 1 && backButtonRef.current) {
+              // ⭐ CUANDO TERMINA LA ÚLTIMA LETRA, NOTIFICAR QUE LA ANIMACIÓN COMPLETÓ
+              if (index === chars.length - 1) {
+                // Notificar al padre que la animación del título terminó
                 setTimeout(() => {
-                  if (!backButtonRef.current) return;
-                  
-                  gsap.set(backButtonRef.current, { 
-                    display: 'block',
-                    opacity: 1 
-                  });
-                  
-                  // Inicializar SplitText para el botón back home
-                  const backButtonSplit = new SplitText(backButtonRef.current, {
-                    type: 'chars',
-                    charsClass: 'char'
-                  });
-                  
-                  splitInstances.current[`back-button`] = backButtonSplit;
-                  
-                  if (!backButtonSplit.chars || backButtonSplit.chars.length === 0) {
-                    console.warn('No se pudieron crear chars para back home');
-                    return;
+                  if (window.__footerAnimationComplete) {
+                    window.__footerAnimationComplete();
                   }
-                  
-                  // Posicionar los chars fuera de pantalla inicialmente
-                  gsap.set(backButtonSplit.chars, {
-                    x: '100vw',
-                  });
-                  
-                  // Función para stagger progresivo del botón
-                  const getBackStaggerDelay = (charIndex, total) => {
-                    const progress = charIndex / total;
-                    const easedProgress = progress * progress;
-                    return easedProgress * 0.5;
-                  };
-                  
-                  // Animar entrada del botón letra por letra desde la derecha
-                  const backChars = backButtonSplit.chars;
-                  
-                  backChars.forEach((char, charIndex) => {
-                    gsap.to(char, {
-                      x: 0,
-                      opacity: 1,
-                      duration: 0.8,
-                      ease: 'power1.inOut',
-                      delay: getBackStaggerDelay(charIndex, backChars.length),
+                }, 200);
+                
+                // Mostrar el botón de back cuando termine la última letra del título
+                if (backButtonRef.current) {
+                  setTimeout(() => {
+                    if (!backButtonRef.current) return;
+                    
+                    gsap.set(backButtonRef.current, { 
+                      display: 'block',
+                      opacity: 1 
                     });
-                  });
-                }, 50);
+                    
+                    // Inicializar SplitText para el botón back home
+                    const backButtonSplit = new SplitText(backButtonRef.current, {
+                      type: 'chars',
+                      charsClass: 'char'
+                    });
+                    
+                    splitInstances.current[`back-button`] = backButtonSplit;
+                    
+                    if (!backButtonSplit.chars || backButtonSplit.chars.length === 0) {
+                      console.warn('No se pudieron crear chars para back home');
+                      return;
+                    }
+                    
+                    // Posicionar los chars fuera de pantalla inicialmente
+                    gsap.set(backButtonSplit.chars, {
+                      x: '100vw',
+                    });
+                    
+                    // Función para stagger progresivo del botón
+                    const getBackStaggerDelay = (charIndex, total) => {
+                      const progress = charIndex / total;
+                      const easedProgress = progress * progress;
+                      return easedProgress * 0.5;
+                    };
+                    
+                    // Animar entrada del botón letra por letra desde la derecha
+                    const backChars = backButtonSplit.chars;
+                    
+                    backChars.forEach((char, charIndex) => {
+                      gsap.to(char, {
+                        x: 0,
+                        opacity: 1,
+                        duration: 0.8,
+                        ease: 'power1.inOut',
+                        delay: getBackStaggerDelay(charIndex, backChars.length),
+                      });
+                    });
+                  }, 50);
+                }
               }
             }
           });

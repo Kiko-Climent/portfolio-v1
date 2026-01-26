@@ -7,6 +7,7 @@ const NavbarMobile = () => {
   const [showLoader, setShowLoader] = useState(true);
   const [showNavbarContent, setShowNavbarContent] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   
   const loaderRef = useRef(null);
   const squareRef = useRef(null);
@@ -95,14 +96,20 @@ const NavbarMobile = () => {
         
         // Movimiento vertical primero
         setTimeout(() => {
-          squareRef.current.style.transition = 'all 0.8s cubic-bezier(0.9, 0, 0.1, 1)';
-          squareRef.current.style.top = '1.7rem';
+          // ⭐ VERIFICAR QUE EL REF EXISTE
+          if (squareRef.current) {
+            squareRef.current.style.transition = 'all 0.8s cubic-bezier(0.9, 0, 0.1, 1)';
+            squareRef.current.style.top = '1.7rem';
+          }
         }, 100);
         
         // Luego movimiento horizontal
         setTimeout(() => {
-          squareRef.current.style.left = 'calc(100% - 1.5rem)';
-          squareRef.current.style.transform = 'translate(-50%, -50%)';
+          // ⭐ VERIFICAR QUE EL REF EXISTE
+          if (squareRef.current) {
+            squareRef.current.style.left = 'calc(100% - 1.5rem)';
+            squareRef.current.style.transform = 'translate(-50%, -50%)';
+          }
         }, 900);
         
         // Ocultar loader y mostrar navbar
@@ -175,6 +182,9 @@ const NavbarMobile = () => {
 
   // Función auxiliar para rotación
   const animateRotation = (element, duration) => {
+    // ⭐ VERIFICAR QUE EL ELEMENTO EXISTE
+    if (!element) return { stop: () => {} };
+    
     let startTime = null;
     let animationId = null;
 
@@ -183,7 +193,10 @@ const NavbarMobile = () => {
       const elapsed = timestamp - startTime;
       
       const rotation = (elapsed / (duration * 1000)) * 360;
-      element.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+      // ⭐ VERIFICAR ANTES DE MODIFICAR
+      if (element && element.style) {
+        element.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+      }
 
       animationId = requestAnimationFrame(animate);
     };
@@ -252,12 +265,18 @@ const NavbarMobile = () => {
       <div 
         ref={squareRef}
         onClick={!showLoader ? toggleDarkMode : undefined}
-        className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white hover:bg-white' : 'border-black hover:bg-black'} bg-transparent transition-colors duration-200 z-[60]`}
+        onMouseEnter={() => !showLoader && setIsHovered(true)}
+        onMouseLeave={() => !showLoader && setIsHovered(false)}
+        className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60]`}
         style={{
           top: '50%',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
-          cursor: !showLoader ? 'pointer' : 'default'
+          transform: `translate(-50%, -50%) rotate(${isHovered ? '180deg' : '0deg'})`,
+          cursor: !showLoader ? 'pointer' : 'default',
+          backgroundColor: isHovered 
+            ? (isDarkMode ? 'white' : 'black') 
+            : 'transparent',
+          transition: 'background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
         }}
         aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
       />
@@ -274,14 +293,6 @@ const NavbarMobile = () => {
           <h2>Fullstack Web Developer</h2>
         </div>
       </div>
-
-
-      {/* {showNavbarContent && (
-        <div className="pt-32 px-8">
-          <h2 className="text-4xl mb-4">Bienvenido</h2>
-          <p className="text-lg">La animación ha terminado y el cuadrado ahora controla el dark mode.</p>
-        </div>
-      )} */}
     </div>
   );
 };

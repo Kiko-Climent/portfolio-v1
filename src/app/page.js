@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Navbar from "@/components/navbar";
 import NavbarMobile from "@/components/navbar/NavbarMobile";
 import Footer3 from '@/components/footer/index3';
 import FooterMobile from '@/components/footer/FooterMobile';
@@ -11,17 +10,24 @@ import { projects } from '@/components/data/projects';
 import ProjectImageSliderThree from '@/components/sliders/ProjectImageSliderThree';
 import ProjectImageSliderMobile from '@/components/sliders/ProjectImageSliderMobile';
 import HoverImageSlider from '@/components/sliders/index';
+import NavbarLoader from '@/components/navbar/NavbarLoader';
 
 
 export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoadingComplete, setIsLoadingComplete] = useState(false);
+  const [showSlider, setShowSlider] = useState(false);
+  const [hideSlider, setHideSlider] = useState(false); // ⭐ NUEVO ESTADO
 
-  // Detectar si es móvil o desktop
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsLoadingComplete(true);
+      }
     };
 
     checkMobile();
@@ -30,17 +36,43 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    if (clickedProject === null) {
+      setShowSlider(false);
+      setHideSlider(false); // ⭐ RESETEAR
+    }
+  }, [clickedProject]);
+
+  // ⭐ CALLBACK PARA CUANDO TERMINA LA ANIMACIÓN DEL FOOTER (mostrar slider)
+  useEffect(() => {
+    window.__footerAnimationComplete = () => {
+      setShowSlider(true);
+      setHideSlider(false);
+    };
+
+    // ⭐ CALLBACK PARA CUANDO EMPIEZA EL BACK (ocultar slider)
+    window.__footerBackStarted = () => {
+      setHideSlider(true);
+    };
+
+    return () => {
+      delete window.__footerAnimationComplete;
+      delete window.__footerBackStarted;
+    };
+  }, []);
+
   const selectedProject = clickedProject ? projects[clickedProject] : null;
   const hoveredProject = activeProject && !clickedProject ? projects[activeProject] : null;
 
-  // Cuando se hace click en un proyecto, primero ocultar el grid y luego mostrar el slider
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
       setClickedProject(null);
       setActiveProject(null);
+      setShowSlider(false);
+      setHideSlider(false); // ⭐ RESETEAR
       return;
     }
-    
+
     setActiveProject(null);
     
     setTimeout(() => {
@@ -48,38 +80,73 @@ export default function Home() {
     }, 600);
   };
 
+  const handleLoadingComplete = () => {
+    setIsLoadingComplete(true);
+  };
+
+  const handleHover = (projectId) => {
+    setActiveProject(projectId);
+  };
+
+  
   return (
     <div className="h-screen w-screen relative overflow-hidden">
-      {/* Navbar condicional */}
-      {isMobile ? <NavbarMobile /> : <Navbar />}
+      {isMobile ? (
+        <NavbarMobile />
+      ) : (
+        <NavbarLoader onLoadingComplete={handleLoadingComplete} />
+      )}
       
-      {/* Background/Grid condicional por dispositivo */}
       {isMobile ? (
         <BackgroundMobile />
       ) : (
-        <PortfolioGridThree activeProject={activeProject} clickedProject={clickedProject} />
+        <div 
+          style={{ 
+            pointerEvents: isLoadingComplete ? 'auto' : 'none'
+          }}
+        >
+          <PortfolioGridThree 
+            activeProject={activeProject} 
+            clickedProject={clickedProject}
+            isVisible={isLoadingComplete}
+          />
+        </div>
       )}
       
-      {/* Slider cuando se hace click en un proyecto - condicional por dispositivo */}
-      {selectedProject && (
-        isMobile ? (
-          <ProjectImageSliderMobile project={selectedProject} />
-        ) : (
-          <ProjectImageSliderThree project={selectedProject} />
-        )
+      {/* ⭐ PASAR hideSlider AL SLIDER */}
+      {selectedProject && isLoadingComplete && showSlider && (
+        <>
+          {isMobile ? (
+            <ProjectImageSliderMobile project={selectedProject} />
+          ) : (
+            <ProjectImageSliderThree 
+              project={selectedProject} 
+              shouldHide={hideSlider} 
+            />
+          )}
+        </>
       )}
       
-      {/* Slider cuando se hace hover sobre un título del footer (solo desktop) */}
-      {!isMobile && hoveredProject && <HoverImageSlider project={hoveredProject} />}
+      {!isMobile && hoveredProject && isLoadingComplete && (
+        <>
+          <HoverImageSlider project={hoveredProject} />
+        </>
+      )}
       
-      {/* Footer condicional */}
       {isMobile ? (
         <FooterMobile onProjectClick={handleProjectClick} />
       ) : (
-        <Footer3 
-          onHover={setActiveProject} 
-          onProjectClick={handleProjectClick} 
-        />
+        <div 
+          style={{ 
+            pointerEvents: isLoadingComplete ? 'auto' : 'none'
+          }}
+        >
+          <Footer3 
+            onHover={handleHover}
+            onProjectClick={handleProjectClick}
+            isVisible={isLoadingComplete}
+          />
+        </div>
       )}
     </div>
   );
