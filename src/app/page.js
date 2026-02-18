@@ -77,38 +77,38 @@ export default function Home() {
         root.style.setProperty('--mobile-bottom-inset', '0px');
         return;
       }
-
-      const viewport = window.visualViewport;
-      const visualViewportInset = viewport
-        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
-        : 0;
-
-      // Algunos navegadores Android reportan 0 aquí aunque la barra tape contenido.
-      const browserUiInset = Math.max(0, window.outerHeight - window.innerHeight);
-      const normalizedBrowserInset = Math.min(browserUiInset, 120);
-      const fallbackInset = 48;
-
-      const bottomInset = Math.max(
-        visualViewportInset,
-        normalizedBrowserInset,
-        fallbackInset
+    
+      const vv = window.visualViewport;
+      if (!vv) {
+        root.style.setProperty('--mobile-bottom-inset', '24px');
+        return;
+      }
+    
+      // La diferencia real entre el viewport del layout y el visual
+      // Esto captura tanto la barra del navegador como el nav gesture bar de Android
+      const bottomOffset = Math.max(
+        0,
+        window.innerHeight - (vv.offsetTop + vv.height)
       );
-
-      root.style.setProperty('--mobile-bottom-inset', `${Math.round(bottomInset)}px`);
+    
+      root.style.setProperty('--mobile-bottom-inset', `${bottomOffset}px`);
     };
-
+    
+    // ⚠️ Añade también el evento 'scroll' del visualViewport
+    // (en Android, la barra se mueve con scroll del visualViewport, no del window)
     const viewport = window.visualViewport;
-
     updateBottomInset();
     window.addEventListener('resize', updateBottomInset);
     window.addEventListener('orientationchange', updateBottomInset);
     viewport?.addEventListener('resize', updateBottomInset);
+    viewport?.addEventListener('scroll', updateBottomInset); // ← añade esto
 
     return () => {
       window.removeEventListener('resize', updateBottomInset);
       window.removeEventListener('orientationchange', updateBottomInset);
       viewport?.removeEventListener('resize', updateBottomInset);
       root.style.setProperty('--mobile-bottom-inset', '0px');
+      viewport?.removeEventListener('scroll', updateBottomInset);
     };
   }, []);
 
@@ -171,7 +171,7 @@ export default function Home() {
       className="relative overflow-hidden"
       style={{
         width: '100vw',
-        height: isMobile ? '100svh' : '100dvh',
+        height: '100dvh',
         minHeight: '100vh',
       }}
     >

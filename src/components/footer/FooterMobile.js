@@ -404,7 +404,7 @@ export default function FooterMobile({ onProjectClick }) {
       <div
         className="absolute left-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]"
         style={{
-          bottom: 'calc(1rem + max(var(--mobile-bottom-inset, 0px), env(safe-area-inset-bottom, 0px)))',
+          bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px) + var(--mobile-bottom-inset, 0px))',
         }}
       >
         <div className="flex flex-col whitespace-nowrap relative w-full">

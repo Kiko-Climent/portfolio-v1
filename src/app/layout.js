@@ -7,6 +7,11 @@ const PPNeueYorkNarrowMedium = localFont({
   display: 'swap',
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover', // ← clave para safe-area-inset en Android
+};
 
 export const metadata = {
   title: "Kiko Climent",
