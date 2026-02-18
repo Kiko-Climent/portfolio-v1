@@ -40,39 +40,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-
-    const updateBottomOverlay = () => {
-      if (window.innerWidth >= 768) {
-        root.style.setProperty('--mobile-bottom-overlay', '0px');
-        return;
-      }
-
-      const viewport = window.visualViewport;
-      const occludedBottom = viewport
-        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
-        : 0;
-
-      root.style.setProperty('--mobile-bottom-overlay', `${Math.round(occludedBottom)}px`);
-    };
-
-    const viewport = window.visualViewport;
-    updateBottomOverlay();
-    window.addEventListener('resize', updateBottomOverlay);
-    window.addEventListener('orientationchange', updateBottomOverlay);
-    viewport?.addEventListener('resize', updateBottomOverlay);
-    viewport?.addEventListener('scroll', updateBottomOverlay);
-
-    return () => {
-      window.removeEventListener('resize', updateBottomOverlay);
-      window.removeEventListener('orientationchange', updateBottomOverlay);
-      viewport?.removeEventListener('resize', updateBottomOverlay);
-      viewport?.removeEventListener('scroll', updateBottomOverlay);
-      root.style.setProperty('--mobile-bottom-overlay', '0px');
-    };
-  }, []);
-
-  useEffect(() => {
     if (clickedProject === null) {
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR
