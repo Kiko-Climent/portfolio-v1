@@ -41,12 +41,10 @@ export default function ProjectImageSliderMobile({ project }) {
 
             {/* INFO DEL PROYECTO - BOTTOM (encima del slider, debajo del footer) */}
             <div 
-                className="absolute left-4 right-4"
+                className="absolute left-4 right-4 bottom-4"
                 style={{ 
                     zIndex: 30,
                     pointerEvents: 'none',
-                    bottom:
-                        'calc(max(env(safe-area-inset-bottom, 0px), var(--mobile-bottom-ui-offset, 0px), 40px) + 1rem)',
                 }}
             >
                 <div className="text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">

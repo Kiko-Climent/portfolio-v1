@@ -17,6 +17,7 @@ export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileViewportHeight, setMobileViewportHeight] = useState(null);
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
   const [isMobileReady, setIsMobileReady] = useState(false);
   const [showSlider, setShowSlider] = useState(false);
@@ -40,44 +41,33 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-
-    const updateBottomUiOffset = () => {
+    const updateViewportHeight = () => {
       if (window.innerWidth >= 768) {
-        root.style.setProperty('--mobile-bottom-ui-offset', '0px');
+        setMobileViewportHeight(null);
         return;
       }
 
       const viewport = window.visualViewport;
-      let occludedBottom = 0;
-
-      if (viewport) {
-        occludedBottom = Math.max(
-          0,
-          window.innerHeight - viewport.height - viewport.offsetTop
-        );
+      if (viewport?.height) {
+        setMobileViewportHeight(Math.round(viewport.height));
+        return;
       }
 
-      root.style.setProperty(
-        '--mobile-bottom-ui-offset',
-        `${Math.round(occludedBottom)}px`
-      );
+      setMobileViewportHeight(window.innerHeight);
     };
 
     const viewport = window.visualViewport;
-
-    updateBottomUiOffset();
-    window.addEventListener('resize', updateBottomUiOffset);
-    window.addEventListener('orientationchange', updateBottomUiOffset);
-    viewport?.addEventListener('resize', updateBottomUiOffset);
-    viewport?.addEventListener('scroll', updateBottomUiOffset);
+    updateViewportHeight();
+    window.addEventListener('resize', updateViewportHeight);
+    window.addEventListener('orientationchange', updateViewportHeight);
+    viewport?.addEventListener('resize', updateViewportHeight);
+    viewport?.addEventListener('scroll', updateViewportHeight);
 
     return () => {
-      window.removeEventListener('resize', updateBottomUiOffset);
-      window.removeEventListener('orientationchange', updateBottomUiOffset);
-      viewport?.removeEventListener('resize', updateBottomUiOffset);
-      viewport?.removeEventListener('scroll', updateBottomUiOffset);
-      root.style.setProperty('--mobile-bottom-ui-offset', '0px');
+      window.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('orientationchange', updateViewportHeight);
+      viewport?.removeEventListener('resize', updateViewportHeight);
+      viewport?.removeEventListener('scroll', updateViewportHeight);
     };
   }, []);
 
@@ -140,7 +130,7 @@ export default function Home() {
       className="relative overflow-hidden"
       style={{
         width: '100vw',
-        height: '100dvh',
+        height: isMobile && mobileViewportHeight ? `${mobileViewportHeight}px` : '100dvh',
         minHeight: '100vh',
       }}
     >

@@ -401,13 +401,7 @@ export default function FooterMobile({ onProjectClick }) {
         style={{ display: 'none' }}
       />
 
-      <div
-        className="absolute left-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]"
-        style={{
-          bottom:
-            'calc(max(env(safe-area-inset-bottom, 0px), var(--mobile-bottom-ui-offset, 0px), 40px) + 1rem)',
-        }}
-      >
+      <div className="absolute bottom-4 left-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
         <div className="flex flex-col whitespace-nowrap relative w-full">
           {items.map(({ title, number, id }) => (
             <div

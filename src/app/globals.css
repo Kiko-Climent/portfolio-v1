@@ -10,7 +10,3 @@ body{
   background-color: white;
   color: black;
 }
-
-:root {
-  --mobile-bottom-ui-offset: 0px;
-}
