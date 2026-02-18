@@ -40,6 +40,68 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!isMobile) return undefined;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      htmlOverscrollBehaviorY: html.style.overscrollBehaviorY,
+      bodyOverflow: body.style.overflow,
+      bodyOverscrollBehaviorY: body.style.overscrollBehaviorY,
+      bodyHeight: body.style.height,
+    };
+
+    // Evita scroll nativo en móvil para mantener estable la UI del navegador.
+    html.style.overflow = 'hidden';
+    html.style.overscrollBehaviorY = 'none';
+    body.style.overflow = 'hidden';
+    body.style.overscrollBehaviorY = 'none';
+    body.style.height = '100%';
+
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehaviorY = previous.htmlOverscrollBehaviorY;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehaviorY = previous.bodyOverscrollBehaviorY;
+      body.style.height = previous.bodyHeight;
+    };
+  }, [isMobile]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const updateBottomInset = () => {
+      if (window.innerWidth >= 768) {
+        root.style.setProperty('--mobile-bottom-inset', '0px');
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      const bottomInset = viewport
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0;
+
+      root.style.setProperty('--mobile-bottom-inset', `${Math.round(bottomInset)}px`);
+    };
+
+    const viewport = window.visualViewport;
+
+    updateBottomInset();
+    window.addEventListener('resize', updateBottomInset);
+    window.addEventListener('orientationchange', updateBottomInset);
+    viewport?.addEventListener('resize', updateBottomInset);
+
+    return () => {
+      window.removeEventListener('resize', updateBottomInset);
+      window.removeEventListener('orientationchange', updateBottomInset);
+      viewport?.removeEventListener('resize', updateBottomInset);
+      root.style.setProperty('--mobile-bottom-inset', '0px');
+    };
+  }, []);
+
+  useEffect(() => {
     if (clickedProject === null) {
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR

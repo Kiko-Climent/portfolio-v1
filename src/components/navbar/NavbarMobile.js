@@ -215,7 +215,10 @@ const NavbarMobile = ({ onReady }) => {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'text-white' : 'text-black'} transition-colors duration-300`}>
+    <div
+      className={`${isDarkMode ? 'text-white' : 'text-black'} transition-colors duration-300`}
+      style={{ height: '100dvh' }}
+    >
       {/* Loader */}
       {showLoader && (
         <div

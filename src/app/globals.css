@@ -10,3 +10,7 @@ body{
   background-color: white;
   color: black;
 }
+
+:root {
+  --mobile-bottom-inset: 0px;
+}
