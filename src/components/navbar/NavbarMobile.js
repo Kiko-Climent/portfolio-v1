@@ -96,14 +96,14 @@ const NavbarMobile = ({ onReady }) => {
         setTimeout(() => {
           if (squareRef.current) {
             squareRef.current.style.transition = 'all 0.8s cubic-bezier(0.9, 0, 0.1, 1)';
-            squareRef.current.style.top = '1.7rem';
+            squareRef.current.style.top = 'calc(1.7rem - 2px)';
           }
         }, 100);
         
         // Luego movimiento horizontal
         setTimeout(() => {
           if (squareRef.current) {
-            squareRef.current.style.left = 'calc(100% - 1.5rem)';
+            squareRef.current.style.left = 'calc(100% - 1.4rem)';
             squareRef.current.style.transform = 'translate(-50%, -50%)';
           }
         }, 900);
@@ -272,7 +272,7 @@ const NavbarMobile = ({ onReady }) => {
         onClick={!showLoader ? toggleDarkMode : undefined}
         onMouseEnter={() => !showLoader && setIsHovered(true)}
         onMouseLeave={() => !showLoader && setIsHovered(false)}
-        className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60]`}
+        className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60]`}
         style={{
           top: '50%',
           left: '50%',
@@ -289,7 +289,7 @@ const NavbarMobile = ({ onReady }) => {
       {/* Navbar */}
       <div 
         ref={navbarRef}
-        className="flex top-4 left-4 right-4 leading-none z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95] absolute transition-opacity duration-500"
+        className="flex top-4 left-4 right-4 leading-none z-50 text-[clamp(1rem,1.5vw,1.5rem)] leading-[0.95] absolute transition-opacity duration-500"
         style={{ opacity: showNavbarContent ? 1 : 0 }}
       >
         <div className="flex flex-col">

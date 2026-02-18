@@ -397,12 +397,12 @@ export default function FooterMobile({ onProjectClick }) {
       {/* Contenedor para el título clickeado (centro de la interfaz, pegado a la izquierda) */}
       <div
         ref={clickedTitleContainerRef}
-        className="absolute top-1/2 left-4 -translate-y-1/2 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95] whitespace-nowrap"
+        className="absolute top-1/2 left-4 -translate-y-1/2 z-50 text-[clamp(1rem,1.5vw,1.5rem)] leading-[0.95] whitespace-nowrap"
         style={{ display: 'none' }}
       />
 
       <div
-        className="absolute left-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]"
+        className="absolute left-4 right-4 z-50 text-[clamp(1rem,1.5vw,1.5rem)] leading-[0.95]"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex flex-col whitespace-nowrap relative w-full">

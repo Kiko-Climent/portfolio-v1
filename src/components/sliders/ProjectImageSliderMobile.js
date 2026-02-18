@@ -52,7 +52,7 @@ export default function ProjectImageSliderMobile({ project }) {
                     bottom: 'calc(1rem + max(var(--mobile-bottom-inset, 0px), env(safe-area-inset-bottom, 0px)))',
                 }}
             >
-                <div className="text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
+                <div className="text-[clamp(1rem,1.5vw,1.5rem)] leading-[0.95]">
                     {text.url ? (
                         <a
                             href={text.url}
