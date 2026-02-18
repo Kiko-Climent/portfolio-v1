@@ -29,7 +29,7 @@ export default function ProjectImageSliderMobile({ project }) {
     }, []);
 
     return (
-        <div className="absolute inset-0 w-full h-screen" style={{ zIndex: 20 }}>
+        <div className="absolute inset-0 w-full h-full" style={{ zIndex: 20 }}>
             {/* SLIDER THREE.JS - Ocupa toda la pantalla */}
             <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25 }}>
                 <SliderThree2Mobile 
@@ -41,10 +41,11 @@ export default function ProjectImageSliderMobile({ project }) {
 
             {/* INFO DEL PROYECTO - BOTTOM (encima del slider, debajo del footer) */}
             <div 
-                className="absolute left-4 right-4 bottom-4"
+                className="absolute left-4 right-4"
                 style={{ 
                     zIndex: 30,
                     pointerEvents: 'none',
+                    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
                 }}
             >
                 <div className="text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">

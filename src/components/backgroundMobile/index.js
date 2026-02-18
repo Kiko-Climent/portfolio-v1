@@ -53,11 +53,11 @@ export default function BackgroundMobile() {
     const backgroundClass = isDarkMode ? 'bg-black' : 'bg-white';
 
     if (!mashedImages.length) {
-        return <div className={`absolute inset-0 w-full h-screen z-0 ${backgroundClass}`} />;
+        return <div className={`absolute inset-0 w-full h-full z-0 ${backgroundClass}`} />;
     }
 
     return (
-        <div className={`absolute inset-0 w-full h-screen z-0 ${backgroundClass}`}>
+        <div className={`absolute inset-0 w-full h-full z-0 ${backgroundClass}`}>
             <SliderThree2Mobile
                 images={mashedImages}
                 project={mashProject}

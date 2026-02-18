@@ -94,7 +94,14 @@ export default function Home() {
 
   
   return (
-    <div className="h-screen w-screen relative overflow-hidden">
+    <div
+      className="relative overflow-hidden"
+      style={{
+        width: '100vw',
+        height: '100dvh',
+        minHeight: '100vh',
+      }}
+    >
       {isMobile ? (
         <NavbarMobile onReady={() => setIsMobileReady(true)} />
       ) : (
