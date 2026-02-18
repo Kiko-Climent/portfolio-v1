@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useDarkMode } from '@/contexts/DarkModeContext';
-import SliderThreeMobile from '@/components/SliderThree/SliderThreeMobile';
+import SliderThree2Mobile from '@/components/SliderThree/SliderThree2Mobile';
 
 export default function ProjectImageSliderMobile({ project }) {
     const { isDarkMode } = useDarkMode();
@@ -32,7 +32,7 @@ export default function ProjectImageSliderMobile({ project }) {
         <div className="absolute inset-0 w-full h-screen" style={{ zIndex: 20 }}>
             {/* SLIDER THREE.JS - Ocupa toda la pantalla */}
             <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25 }}>
-                <SliderThreeMobile 
+                <SliderThree2Mobile 
                     images={images}
                     project={project}
                     navbarHeight={navbarHeight}

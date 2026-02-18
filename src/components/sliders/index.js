@@ -4,10 +4,16 @@ import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 
+function getImageSrc(project, img) {
+    if (project.id === 'about' && img.id === 1) {
+        return `${project.imagesPath}/about.png`;
+    }
+    return `${project.imagesPath}/${project.id}${img.id}.png`;
+}
+
 export default function HoverImageSlider({ project }) {
     const { isDarkMode } = useDarkMode();
     
-    // ⭐ AGREGAR TODOS LOS ESTADOS FALTANTES
     const [navbarHeight, setNavbarHeight] = useState(0);
     const [isHovering, setIsHovering] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,8 +27,9 @@ export default function HoverImageSlider({ project }) {
 
     const { images = [], text } = project.slider;
     
-    // Si no hay imágenes, no mostrar el slider
     if (!images.length) return null;
+
+    const isSingleImage = project.id === 'about' && images.length === 1;
 
     /* ---------------- NAVBAR HEIGHT ---------------- */
 
@@ -39,9 +46,10 @@ export default function HoverImageSlider({ project }) {
         return () => window.removeEventListener('resize', updateNavbarHeight);
     }, []);
 
-    /* ---------------- GSAP TIMELINE ---------------- */
+    /* ---------------- GSAP TIMELINE (solo si hay varias imágenes) ---------------- */
 
     const startTimeline = () => {
+        if (isSingleImage) return;
         const imgs = imagesRef.current.filter(Boolean);
         if (!imgs.length) return;
     
@@ -59,6 +67,7 @@ export default function HoverImageSlider({ project }) {
     
 
     useEffect(() => {
+        if (isSingleImage) return;
         let timeoutId;
 
         const init = () => {
@@ -75,13 +84,13 @@ export default function HoverImageSlider({ project }) {
             clearTimeout(timeoutId);
             timelineRef.current?.kill();
         };
-    }, [images.length]);
+    }, [images.length, isSingleImage]);
 
     /* ---------------- INTERACTIONS ---------------- */
 
     const handleMouseEnter = () => {
         setIsHovering(true);
-        if (!timelineRef.current) return;
+        if (isSingleImage || !timelineRef.current) return;
 
         timelineRef.current.pause();
 
@@ -133,20 +142,19 @@ export default function HoverImageSlider({ project }) {
             
             <div className="relative w-1/2">
                 
-                {/* Contenedor de imágenes que ocupa todo el espacio */}
                 <div className="relative w-full h-full">
                     {images.map((img, i) => (
                         <img
                             key={img.id}
                             ref={(el) => (imagesRef.current[i] = el)}
-                            src={`${project.imagesPath}/${project.id}${img.id}.png`}
+                            src={getImageSrc(project, img)}
                             alt={`${project.id} ${img.id}`}
                             className="absolute object-contain will-change-opacity"
                             style={{
                                 top: calculateTop(img.top),
                                 left: img.left,
                                 width: img.width,
-                                opacity: 0
+                                opacity: isSingleImage ? 1 : 0
                             }}
                         />
                     ))}

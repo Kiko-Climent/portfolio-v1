@@ -1,21 +1,19 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
-const NavbarMobile = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+const NavbarMobile = ({ onReady }) => {
+  const { isDarkMode, toggleDarkMode } = useDarkMode(); // ⭐ USAR EL CONTEXTO
   const [showLoader, setShowLoader] = useState(true);
   const [showNavbarContent, setShowNavbarContent] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const hasNotifiedReadyRef = useRef(false);
   
   const loaderRef = useRef(null);
   const squareRef = useRef(null);
   const navbarRef = useRef(null);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
 
   useEffect(() => {
     // Configuración inicial
@@ -96,7 +94,6 @@ const NavbarMobile = () => {
         
         // Movimiento vertical primero
         setTimeout(() => {
-          // ⭐ VERIFICAR QUE EL REF EXISTE
           if (squareRef.current) {
             squareRef.current.style.transition = 'all 0.8s cubic-bezier(0.9, 0, 0.1, 1)';
             squareRef.current.style.top = '1.7rem';
@@ -105,7 +102,6 @@ const NavbarMobile = () => {
         
         // Luego movimiento horizontal
         setTimeout(() => {
-          // ⭐ VERIFICAR QUE EL REF EXISTE
           if (squareRef.current) {
             squareRef.current.style.left = 'calc(100% - 1.5rem)';
             squareRef.current.style.transform = 'translate(-50%, -50%)';
@@ -127,6 +123,12 @@ const NavbarMobile = () => {
       if (squareRotation) squareRotation.stop();
     };
   }, []);
+
+  useEffect(() => {
+    if (!showNavbarContent || hasNotifiedReadyRef.current) return;
+    hasNotifiedReadyRef.current = true;
+    if (onReady) onReady();
+  }, [showNavbarContent, onReady]);
 
   // Función auxiliar para animar atributos
   const animateElement = (element, targetAttrs, duration, delay, yoyo) => {
@@ -182,7 +184,6 @@ const NavbarMobile = () => {
 
   // Función auxiliar para rotación
   const animateRotation = (element, duration) => {
-    // ⭐ VERIFICAR QUE EL ELEMENTO EXISTE
     if (!element) return { stop: () => {} };
     
     let startTime = null;
@@ -193,7 +194,6 @@ const NavbarMobile = () => {
       const elapsed = timestamp - startTime;
       
       const rotation = (elapsed / (duration * 1000)) * 360;
-      // ⭐ VERIFICAR ANTES DE MODIFICAR
       if (element && element.style) {
         element.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
       }
@@ -215,7 +215,7 @@ const NavbarMobile = () => {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'} transition-colors duration-300`}>
+    <div className={`min-h-screen ${isDarkMode ? 'text-white' : 'text-black'} transition-colors duration-300`}>
       {/* Loader */}
       {showLoader && (
         <div
@@ -224,7 +224,8 @@ const NavbarMobile = () => {
           style={{ 
             opacity: isTransitioning ? 0 : 1,
             transition: 'opacity 0.5s ease-out',
-            pointerEvents: isTransitioning ? 'none' : 'auto'
+            pointerEvents: isTransitioning ? 'none' : 'auto',
+            backgroundColor: isDarkMode ? 'black' : 'white',
           }}
         >
           <svg
@@ -239,23 +240,23 @@ const NavbarMobile = () => {
             <path id="loader-square-5" d="M 330,500 L 330,330 L 670,330 L 670,670 L 330,670 L 330,500" fill="none" />
             <path id="loader-square-6" d="M 400,500 L 400,400 L 600,400 L 600,600 L 400,600 L 400,500" fill="none" />
 
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-1" startOffset="25%" textLength="300">Kiko Climent</textPath>
+            <text className="orbit-text uppercase text-[2.75em] transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+              <textPath href="#loader-square-1" startOffset="25%" textLength="300" lengthAdjust="spacing">Kiko Climent</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-2" startOffset="26%" textLength="280">Fullstack</textPath>
+            <text className="orbit-text uppercase text-[2.75em] transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+              <textPath href="#loader-square-2" startOffset="26%" textLength="320" lengthAdjust="spacing">Fullstack</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-3" startOffset="28%" textLength="240">Web Developer</textPath>
+            <text className="orbit-text uppercase text-[2.75em] transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+              <textPath href="#loader-square-3" startOffset="28%" textLength="320" lengthAdjust="spacing">Web Developer</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-4" startOffset="27%" textLength="260">Creative Code</textPath>
+            <text className="orbit-text uppercase text-[2.75em] transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+              <textPath href="#loader-square-4" startOffset="27%" textLength="260" lengthAdjust="spacing">Creative Code</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-5" startOffset="25%" textLength="290">Portfolio</textPath>
+            <text className="orbit-text uppercase text-[2.75em] transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+              <textPath href="#loader-square-5" startOffset="25%" textLength="290" lengthAdjust="spacing">Portfolio</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-6" startOffset="26%" textLength="200">2026</textPath>
+            <text className="orbit-text uppercase text-[2.75em] transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+              <textPath href="#loader-square-6" startOffset="26%" textLength="200" lengthAdjust="spacing">2026</textPath>
             </text>
           </svg>
         </div>

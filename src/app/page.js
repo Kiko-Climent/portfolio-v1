@@ -18,6 +18,7 @@ export default function Home() {
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
+  const [isMobileReady, setIsMobileReady] = useState(false);
   const [showSlider, setShowSlider] = useState(false);
   const [hideSlider, setHideSlider] = useState(false); // ⭐ NUEVO ESTADO
 
@@ -27,6 +28,8 @@ export default function Home() {
       setIsMobile(mobile);
       if (mobile) {
         setIsLoadingComplete(true);
+      } else {
+        setIsMobileReady(false);
       }
     };
 
@@ -63,6 +66,7 @@ export default function Home() {
 
   const selectedProject = clickedProject ? projects[clickedProject] : null;
   const hoveredProject = activeProject && !clickedProject ? projects[activeProject] : null;
+  const shouldShowMobileBackground = isMobile && isMobileReady && clickedProject === null;
 
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
@@ -92,14 +96,14 @@ export default function Home() {
   return (
     <div className="h-screen w-screen relative overflow-hidden">
       {isMobile ? (
-        <NavbarMobile />
+        <NavbarMobile onReady={() => setIsMobileReady(true)} />
       ) : (
         <NavbarLoader onLoadingComplete={handleLoadingComplete} />
       )}
       
-      {isMobile ? (
+      {shouldShowMobileBackground ? (
         <BackgroundMobile />
-      ) : (
+      ) : !isMobile ? (
         <div 
           style={{ 
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
@@ -111,13 +115,13 @@ export default function Home() {
             isVisible={isLoadingComplete}
           />
         </div>
-      )}
+      ) : null}
       
       {/* ⭐ PASAR hideSlider AL SLIDER */}
       {selectedProject && isLoadingComplete && showSlider && (
         <>
           {isMobile ? (
-            <ProjectImageSliderMobile project={selectedProject} />
+            !hideSlider && <ProjectImageSliderMobile project={selectedProject} />
           ) : (
             <ProjectImageSliderThree 
               project={selectedProject} 
@@ -133,9 +137,9 @@ export default function Home() {
         </>
       )}
       
-      {isMobile ? (
+      {isMobile && isMobileReady ? (
         <FooterMobile onProjectClick={handleProjectClick} />
-      ) : (
+      ) : !isMobile ? (
         <div 
           style={{ 
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
@@ -147,7 +151,7 @@ export default function Home() {
             isVisible={isLoadingComplete}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

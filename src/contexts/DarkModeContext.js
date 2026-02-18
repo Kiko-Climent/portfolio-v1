@@ -5,21 +5,25 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const DarkModeContext = createContext();
 
 export function DarkModeProvider({ children }) {
-  // Inicializar el estado desde localStorage o desde la clase existente en el HTML
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      // Primero verificar si hay un valor guardado en localStorage
-      const saved = localStorage.getItem('darkMode');
-      if (saved !== null) {
-        return saved === 'true';
-      }
-      // Si no, verificar si el HTML ya tiene la clase dark
-      return document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
+  // Estado inicial determinista para evitar hydration mismatch (SSR/cliente).
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
   useEffect(() => {
+    // Cargar preferencia del usuario una vez montado el cliente.
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) {
+      setIsDarkMode(saved === 'true');
+    } else {
+      // Fallback: respetar una clase preexistente solo si existe.
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    }
+    setIsThemeLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isThemeLoaded) return;
+
     // Aplicar o remover la clase dark del html inmediatamente
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -32,7 +36,7 @@ export function DarkModeProvider({ children }) {
     }
     // Guardar la preferencia en localStorage
     localStorage.setItem('darkMode', isDarkMode.toString());
-  }, [isDarkMode]);
+  }, [isDarkMode, isThemeLoaded]);
 
   const toggleDarkMode = () => {
     setIsDarkMode(prev => !prev);

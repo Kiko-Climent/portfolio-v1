@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 import SliderThree from '@/components/SliderThree/index';
+import SliderThree2 from '../SliderThree/index2';
 
 export default function ProjectImageSliderThree({ project, shouldHide = false }) {
     const { isDarkMode } = useDarkMode();
@@ -15,6 +16,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
     if (!images.length) return null;
 
     const [navbarHeight, setNavbarHeight] = useState(0);
+    const isAbout = project.id === 'about';
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -43,6 +45,14 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
         return () => window.removeEventListener('resize', updateNavbarHeight);
     }, []);
 
+    // Función para obtener la ruta de la imagen de about
+    const getAboutImageSrc = () => {
+        if (isAbout && images[0]) {
+            return `${project.imagesPath}/about.png`;
+        }
+        return null;
+    };
+
     return (
         <div 
             className="fixed top-0 left-0 w-full h-screen flex z-10 transition-opacity"
@@ -66,11 +76,33 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
             </div>
 
             <div className="relative w-1/2 h-screen" style={{ minHeight: '100vh' }}>
-                <SliderThree 
-                    images={images}
-                    project={project}
-                    navbarHeight={navbarHeight}
-                />
+                {isAbout ? (
+                    // Vista estática para About: imagen repetida 2-3 veces en columna
+                    <div 
+                        className="flex flex-col items-center justify-center h-full gap-8 px-8"
+                        style={{ paddingTop: `${navbarHeight}px` }}
+                    >
+                        {[1, 2, 3].map((index) => (
+                            <img
+                                key={index}
+                                src={getAboutImageSrc()}
+                                alt="About"
+                                className="object-contain"
+                                style={{
+                                    width: images[0]?.width || '40%',
+                                    maxHeight: 'calc((100vh - 200px) / 3)',
+                                }}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    // SliderThree para los demás proyectos
+                    <SliderThree2 
+                        images={images}
+                        project={project}
+                        navbarHeight={navbarHeight}
+                    />
+                )}
             </div>
         </div>
     );

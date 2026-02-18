@@ -27,14 +27,16 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
     images.push({ src: `/acid/acid${i}.png`, project: 'acid', id: i });
   }
 
+  // About: índice 40 (1 imagen)
+  images.push({ src: `/about/about.png`, project: 'about', id: 1 });
+
   const [hoveredImage, setHoveredImage] = useState(null);
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [availableHeight, setAvailableHeight] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [startAnimation, setStartAnimation] = useState(false);
-  const [animationComplete, setAnimationComplete] = useState(false); // ⭐ NUEVO
+  const [animationComplete, setAnimationComplete] = useState(false);
 
-  // ⭐ GENERAR DELAYS ALEATORIOS
   const randomDelays = useMemo(() => {
     const indices = Array.from({ length: images.length }, (_, i) => i);
     
@@ -93,7 +95,6 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
     return () => window.removeEventListener('resize', updateHeight);
   }, [isVisible]);
 
-  // ⭐ INICIAR ANIMACIÓN DESPUÉS DE 500ms
   useEffect(() => {
     if (isVisible && !startAnimation) {
       const timer = setTimeout(() => {
@@ -104,13 +105,12 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
     }
   }, [isVisible, startAnimation]);
 
-  // ⭐ MARCAR ANIMACIÓN COMO COMPLETA
   useEffect(() => {
     if (startAnimation && !animationComplete) {
       const maxDelay = Math.max(...randomDelays);
       const timer = setTimeout(() => {
         setAnimationComplete(true);
-      }, maxDelay + 700); // maxDelay + duración de la transición
+      }, maxDelay + 700);
       
       return () => clearTimeout(timer);
     }
@@ -126,12 +126,13 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
     return `${scaledTop + navbarOffset}%`;
   };
 
+  // ⭐ MODIFICADO: Ahora usa project.hover en lugar de project.slider
   const getHoveredImageConfig = () => {
     if (!hoveredImage) return null;
     const project = projects[hoveredImage.project];
-    if (!project || !project.slider || !project.slider.images) return null;
+    if (!project || !project.hover || !project.hover.images) return null;
     
-    const imageConfig = project.slider.images.find(img => img.id === hoveredImage.id);
+    const imageConfig = project.hover.images.find(img => img.id === hoveredImage.id);
     return imageConfig ? { ...imageConfig, project } : null;
   };
 
@@ -218,7 +219,6 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
                 style={{ 
                   opacity: startAnimation ? opacity : 0,
                   filter: `blur(${blur})`,
-                  // ⭐ SOLO APLICAR DELAY DURANTE LA ANIMACIÓN INICIAL
                   ...(!animationComplete && {
                     transition: `opacity 0.7s ease-in ${animationDelay}ms`
                   })
@@ -239,7 +239,7 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
 
       {hoveredImageConfig && imageDimensions && isVisible && (
         <WaveImage
-          src={`${hoveredImageConfig.project.imagesPath}/${hoveredImageConfig.project.id}${hoveredImageConfig.id}.png`}
+        src={`${hoveredImageConfig.project.imagesPath}/${hoveredImageConfig.project.id === 'about' && hoveredImageConfig.id === 1 ? 'about' : `${hoveredImageConfig.project.id}${hoveredImageConfig.id}`}.png`}
           alt={`Preview ${hoveredImageConfig.project.id} ${hoveredImageConfig.id}`}
           className="will-change-transform z-40"
           isVisible={true}

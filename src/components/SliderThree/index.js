@@ -57,7 +57,7 @@ export default function SliderThree({ images, project, navbarHeight }) {
                 smoothing: 0.1,
                 slideLerp: 0.075,
                 distortionDecay: 0.95,
-                maxDistortion: 2.5,
+                maxDistortion: 3.5,
                 distortionSensitivity: 0.15,
                 distortionSmoothing: 0.075,
             };
@@ -109,7 +109,9 @@ export default function SliderThree({ images, project, navbarHeight }) {
                 // Cargar imagen
                 const imageIndex = (index % images.length);
                 const img = images[imageIndex];
-                const imagePath = `${project.imagesPath}/${project.id}${img.id}.png`;
+                const imagePath = (project.id === 'about' && img.id === 1)
+                    ? `${project.imagesPath}/about.png`
+                    : `${project.imagesPath}/${project.id}${img.id}.png`;
 
                 new THREE.TextureLoader().load(
                     imagePath,
@@ -148,7 +150,8 @@ export default function SliderThree({ images, project, navbarHeight }) {
             // Update curve distortion
             const updateCurve = (mesh, worldPositionY, distortionFactor) => {
                 const distortionCenter = new THREE.Vector2(0, 0);
-                const distortionRadius = slideHeight * 1.5;
+                // Aumentamos el radio para que cubra toda la pantalla verticalmente
+                const distortionRadius = slideHeight * 4.0;
                 const maxCurvature = settings.maxDistortion * distortionFactor;
 
                 const positionAttribute = mesh.geometry.attributes.position;
@@ -166,9 +169,9 @@ export default function SliderThree({ images, project, navbarHeight }) {
 
                     let distortionStrength = 1 - distFromCenter / distortionRadius;
                     distortionStrength = Math.max(0, distortionStrength);
-                    distortionStrength = Math.pow(distortionStrength, 0.7);
+                    distortionStrength = Math.pow(distortionStrength, 0.5);
 
-                    const curveZ = -Math.sin((distortionStrength * Math.PI) / 2) * maxCurvature * 2.0;
+                    const curveZ = -Math.sin((distortionStrength * Math.PI) / 2) * maxCurvature * 2.5;
                     positionAttribute.setZ(i, curveZ);
                 }
 
@@ -294,11 +297,8 @@ export default function SliderThree({ images, project, navbarHeight }) {
                     slide.userData.targetY = baseY;
                     slide.userData.currentY += (slide.userData.targetY - slide.userData.currentY) * settings.slideLerp;
 
-                    const wrapThreshold = totalHeight / 2 + slideHeight;
-                    if (Math.abs(slide.userData.currentY) < wrapThreshold * 1.5) {
-                        slide.position.y = slide.userData.currentY;
-                        updateCurve(slide, slide.position.y, currentDistortionFactor);
-                    }
+                    slide.position.y = slide.userData.currentY;
+                    updateCurve(slide, slide.position.y, currentDistortionFactor);
                 });
 
                 renderer.render(scene, camera);

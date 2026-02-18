@@ -15,7 +15,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
       { title: "Salon Vilarnau", number: "02", id: "salon" },
       { title: "Against Low Trends", number: "03", id: "alt" },
       { title: "Acid Discos", number: "04", id: "acid" },
-      { title: "About", number: "Me", id: null },
+      { title: "About", number: "Me", id: "about" },
     ];
 
     const titleRefs = useRef({});
@@ -49,6 +49,11 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
               }
             });
             
+            // ⭐ Aplicar color a los chars
+            titleSplit.chars.forEach(char => {
+              char.style.color = isDarkMode ? 'white' : 'black';
+            });
+            
             splitInstances.current[`title-${number}`] = titleSplit;
           }
           
@@ -57,6 +62,12 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
               type: 'chars',
               charsClass: 'char'
             });
+            
+            // ⭐ Aplicar color a los chars
+            numberSplit.chars.forEach(char => {
+              char.style.color = isDarkMode ? 'white' : 'black';
+            });
+            
             splitInstances.current[`number-${number}`] = numberSplit;
           }
         });
@@ -72,7 +83,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
         });
         splitInstances.current = {};
       };
-    }, []);
+    }, [isDarkMode]);
 
     useEffect(() => {
       if (backButtonRef.current) {
@@ -170,6 +181,11 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
             }
           });
 
+          // ⭐ Aplicar color a los chars del nuevo título
+          newTitleSplit.chars.forEach(char => {
+            char.style.color = isDarkMode ? 'white' : 'black';
+          });
+
           gsap.set(newTitleSplit.chars, { 
             x: '100vw',
             opacity: 1,
@@ -196,16 +212,13 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
               ease: 'power1.inOut',
               delay: reducedDelay + getStaggerDelay(index, chars.length),
               onComplete: () => {
-                // ⭐⭐⭐ AQUÍ VA EL CALLBACK - CUANDO TERMINA LA ÚLTIMA LETRA ⭐⭐⭐
                 if (index === chars.length - 1) {
-                  // Notificar que la animación del título terminó
                   setTimeout(() => {
                     if (window.__footerAnimationComplete) {
                       window.__footerAnimationComplete();
                     }
                   }, 200);
                   
-                  // Mostrar el botón de back cuando termine la última letra del título
                   if (backButtonRef.current) {
                     setTimeout(() => {
                       if (!backButtonRef.current) return;
@@ -226,6 +239,11 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
                         console.warn('No se pudieron crear chars para back menu');
                         return;
                       }
+                      
+                      // ⭐ Aplicar color a los chars del botón back
+                      backButtonSplit.chars.forEach(char => {
+                        char.style.color = isDarkMode ? 'white' : 'black';
+                      });
                       
                       gsap.set(backButtonSplit.chars, {
                         x: '100vw',
@@ -261,7 +279,6 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
     };
 
     const handleBack = () => {
-      // ⭐ NOTIFICAR QUE EMPIEZA EL BACK (ocultar slider inmediatamente)
       if (window.__footerBackStarted) {
         window.__footerBackStarted();
       }
@@ -307,7 +324,6 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
             }
             delete splitInstances.current[`back-button`];
             
-            // ⭐ ESPERAR A QUE EL SLIDER DESAPAREZCA (800ms) ANTES DE MOSTRAR LOS TÍTULOS
             setTimeout(() => {
               items.forEach(({ number: itemNumber }, index) => {
                 const titleSplit = splitInstances.current[`title-${itemNumber}`];
@@ -346,7 +362,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
                   onProjectClick(null);
                 }
               }, 2000);
-            }, 800); // ⭐ Esperar 800ms (duración del fade out del slider)
+            }, 800);
           }
         });
       }
@@ -354,8 +370,10 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
   
     return (
       <div
-        className="flex bottom-4 left-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95] absolute transition-opacity duration-700"
+        className="flex bottom-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95] absolute transition-opacity duration-700"
         style={{
+          left: '50%',
+          width: 'calc(50% - 1rem)',
           opacity: isVisible ? 1 : 0,
           pointerEvents: isVisible ? 'auto' : 'none'
         }}
@@ -366,9 +384,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
           }
         }}
       >
-        <div className="flex w-1/2" />
-  
-        <div className="flex w-1/2 flex-col whitespace-nowrap relative">
+        <div className="flex w-full flex-col whitespace-nowrap relative">
           <div
             ref={clickedTitleContainerRef}
             className="absolute bottom-0 right-0 whitespace-nowrap"
@@ -381,9 +397,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
               key={number}
               className="flex justify-between cursor-pointer transition-colors duration-300 ease-in-out"
               style={{
-                color: hoveredId && hoveredId !== id 
-                  ? (isDarkMode ? '#9ca3af' : '#6b7280')
-                  : (isDarkMode ? 'white' : 'black')
+                opacity: hoveredId && hoveredId !== id ? 0.5 : 1
               }}
               onMouseEnter={() => {
                 if (id && !clickedNumber) {

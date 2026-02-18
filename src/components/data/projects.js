@@ -15,8 +15,8 @@ export const projects = {
           { id: 3, top: '25%', left: '10%', width: '70%' },
           { id: 4, top: '10%', left: '20%', width: '75%' },
           { id: 5, top: '5%', left: '3%', width: '70%' },
-          { id: 6, top: '15%', left: '10%', width: '80%' },
-          { id: 7, top: '10%', left: '15%', width: '80%' },
+          { id: 6, top: '15%', left: '10%', width: '75%' },
+          { id: 7, top: '10%', left: '15%', width: '75%' },
           { id: 8, top: '10%', left: '5%', width: '35%' },
           { id: 9, top: '20%', left: '25%', width: '25%' },
           { id: 10, top: '0%', left: '45%', width: '35%' },
@@ -26,6 +26,21 @@ export const projects = {
           title: 'vilarnau.de',
           description: 'Hair salon, Web & Interaction, Clean Layout, Fast Motion, Editorial Design, Minimal Storytelling, Layered UI, Fluid Scroll, Modern Typography, Headless Tech, Next.js, JavaScript, GSAP, Framer Motion, Vercel, TailwindCSS, Motion UI, Responsive.'
         }
+      },
+      hover: {
+        images: [
+          { id: 1, width: '75%' },
+          { id: 2, width: '75%' },
+          { id: 3, width: '75%' },
+          { id: 4, width: '75%' },
+          { id: 5, width: '75%' },
+          { id: 6, width: '75%' },
+          { id: 7, width: '75%' },
+          { id: 8, width: '35%' },
+          { id: 9, width: '35%' },
+          { id: 10, width: '35%' },
+          { id: 11, width: '35%' }
+        ]
       }
     },
     johnny: {
@@ -56,6 +71,23 @@ export const projects = {
           title: 'johnnycarretes.com',
           description: 'analog photography, portfolio, immersive experience, infinite canvas, 3D, creative, web aesthetic, brutalist design, strong immagery, editorial, Next.js, JavaScript, GSAP, Framer Motion, Three.js, Shaders, Vercel, TailwindCSS, Motion UI, Responsive.'
         }
+      },
+      hover: {
+        images: [
+          { id: 1, width: '75%' },
+          { id: 2, width: '75%' },
+          { id: 3, width: '75%' },
+          { id: 4, width: '75%' },
+          { id: 5, width: '75%' },
+          { id: 6, width: '35%' },
+          { id: 7, width: '35%' },
+          { id: 8, width: '75%' },
+          { id: 9, width: '35%' },
+          { id: 10, width: '40%' },
+          { id: 11, width: '35%' },
+          { id: 12, width: '35%' },
+          { id: 13, width: '35%' },
+        ]
       }
     },
     alt: {
@@ -78,6 +110,18 @@ export const projects = {
           title: 'againstlt.com',
           description: 'booking agency, dj, techno, dark, underground, big typography, Next.js, Firebase, Javascriptt, Framer Motion, TailwindCss, Responsive,'
         }
+      },
+      hover: {
+        images: [
+          { id: 1, width: '75%' },
+          { id: 2, width: '35%' },
+          { id: 3, width: '75%' },
+          { id: 4, width: '75%' },
+          { id: 5, width: '35%' },
+          { id: 6, width: '75%' },
+          { id: 7, width: '35%' },
+          { id: 8, width: '75%' },
+        ]
       }
     },
     acid: {
@@ -100,7 +144,39 @@ export const projects = {
           title: 'acid-discos.mmdiscos.com',
           description: 'record label, underground, 90s style, big typography, audio player, React, javascript, firebase, tailwindcss, responsive'
         }
+      },
+      hover: {
+        images: [
+          { id: 1, width: '75%' },
+          { id: 2, width: '75%' },
+          { id: 3, width: '35%' },
+          { id: 4, width: '75%' },
+          { id: 5, width: '75%' },
+          { id: 6, width: '35%' },
+          { id: 7, width: '35%' },
+          { id: 8, width: '75%' },
+        ]
       }
     },
+    about: {
+      id: 'about',
+      imagesPath: '/about',
+      imagesCount: 1,
+      gridLayout: [],
+      slider: {
+        images: [
+          { id: 1, top: '15%', left: '30%', width: '40%' },
+        ],
+        text: {
+          title: 'about',
+          description: 'full-stack web developer focused on the front-end, blending code and creativity to craft immersive digital experiences. As a creative coder, I love pushing interfaces through motion, interaction, and 3D, working mainly with GSAP, Three.js, and WebGL. I\'m part of AllThatJazz, a graphic and digital creation atelier, where I explore experimental design and creative development. When I\'m not coding, you\'ll find me following football or basketball, listening to music, or diving into sci-fi films. My work is heavily inspired by brutalism, minimalism, Asian culture, and the raw aesthetics of the 90s.'
+        }
+      },
+      hover: {
+        images: [
+          { id: 1, width: '40%' },
+        ]
+      }
+    }
   };
   

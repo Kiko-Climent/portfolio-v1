@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-export default function SliderThreeMobile({ images, project, navbarHeight }) {
+export default function SliderThree2Mobile({ images, project, navbarHeight }) {
     const containerRef = useRef(null);
     const rendererRef = useRef(null);
     const cleanupRef = useRef(null);
@@ -14,10 +14,10 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
         // Esperar a que el contenedor tenga dimensiones
         const initThree = () => {
             if (!containerRef.current) return;
-            
+
             const width = containerRef.current.clientWidth;
             const height = containerRef.current.clientHeight;
-            
+
             // Si no tiene dimensiones, reintentar después de un pequeño delay
             if (width === 0 || height === 0) {
                 setTimeout(initThree, 50);
@@ -26,14 +26,14 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
 
             let animationId = null;
             const slides = [];
-            
+
             // Renderer
-            const renderer = new THREE.WebGLRenderer({ 
+            const renderer = new THREE.WebGLRenderer({
                 alpha: true,
                 antialias: true,
-                preserveDrawingBuffer: true
+                preserveDrawingBuffer: true,
             });
-            
+
             renderer.setSize(width, height);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             containerRef.current.appendChild(renderer.domElement);
@@ -57,12 +57,16 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
                 smoothing: 0.1,
                 slideLerp: 0.075,
                 distortionDecay: 0.95,
-                maxDistortion: 3.5,
-                distortionSensitivity: 0.15,
-                distortionSmoothing: 0.075,
+                maxDistortion: 0.35,
+                distortionSensitivity: 0.1,
+                distortionSmoothing: 0.06,
+                tiltStrength: 0.42,
+                bendStrength: 0.08,
+                maxTiltAngle: THREE.MathUtils.degToRad(65),
+                tiltLerp: 0.12,
             };
 
-            // Slide dimensions
+            // Slide dimensions (móvil)
             const slideWidth = 2.5;
             const slideHeight = 2.0;
             const gap = 0.15;
@@ -104,14 +108,17 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
                 mesh.userData = {
                     originalVertices: [...geometry.attributes.position.array],
                     index,
+                    currentTilt: 0,
                 };
 
                 // Cargar imagen
-                const imageIndex = (index % images.length);
+                const imageIndex = index % images.length;
                 const img = images[imageIndex];
-                const imagePath = (project.id === 'about' && img.id === 1)
-                    ? `${project.imagesPath}/about.png`
-                    : `${project.imagesPath}/${project.id}${img.id}.png`;
+                const imagePath = img.src
+                    ? img.src
+                    : (project.id === 'about' && img.id === 1)
+                        ? `${project.imagesPath}/about.png`
+                        : `${project.imagesPath}/${project.id}${img.id}.png`;
 
                 new THREE.TextureLoader().load(
                     imagePath,
@@ -148,30 +155,28 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
             });
 
             // Update curve distortion
-            const updateCurve = (mesh, worldPositionY, distortionFactor) => {
-                const distortionCenter = new THREE.Vector2(0, 0);
-                // Aumentamos el radio para que cubra toda la pantalla verticalmente
-                const distortionRadius = slideHeight * 4.0;
-                const maxCurvature = settings.maxDistortion * distortionFactor;
-
+            const updateCurve = (mesh, _worldPositionY, distortionFactor) => {
                 const positionAttribute = mesh.geometry.attributes.position;
                 const originalVertices = mesh.userData.originalVertices;
 
+                const slideHalfHeight = slideHeight / 2;
+                const distortionIntensity = settings.maxDistortion * distortionFactor;
+                const tiltAmount = settings.tiltStrength * distortionIntensity;
+                const bendAmount = settings.bendStrength * distortionIntensity;
+
                 for (let i = 0; i < positionAttribute.count; i++) {
-                    const x = originalVertices[i * 3];
                     const y = originalVertices[i * 3 + 1];
 
-                    const vertexWorldPosY = worldPositionY + y;
-                    const distFromCenter = Math.sqrt(
-                        Math.pow(x - distortionCenter.x, 2) +
-                        Math.pow(vertexWorldPosY - distortionCenter.y, 2)
-                    );
+                    // Distancia relativa al centro de la slide (-1 a 1)
+                    const relativeY = y / slideHalfHeight;
+                    const normalizedY = THREE.MathUtils.clamp(relativeY, -1, 1);
 
-                    let distortionStrength = 1 - distFromCenter / distortionRadius;
-                    distortionStrength = Math.max(0, distortionStrength);
-                    distortionStrength = Math.pow(distortionStrength, 0.5);
+                    // "Medio volteo" suave: inclinación vertical con una curvatura mínima
+                    // para evitar el efecto de ola y que la parte inferior crezca demasiado.
+                    const tiltZ = -normalizedY * tiltAmount;
+                    const bendZ = -(1 - normalizedY * normalizedY) * bendAmount;
+                    const curveZ = tiltZ + bendZ;
 
-                    const curveZ = -Math.sin((distortionStrength * Math.PI) / 2) * maxCurvature * 2.5;
                     positionAttribute.setZ(i, curveZ);
                 }
 
@@ -231,12 +236,12 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
 
             const handleResize = () => {
                 if (!containerRef.current || !renderer) return;
-                
+
                 const resizeWidth = containerRef.current.clientWidth;
                 const resizeHeight = containerRef.current.clientHeight;
-                
+
                 if (resizeWidth === 0 || resizeHeight === 0) return;
-                
+
                 camera.aspect = resizeWidth / resizeHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(resizeWidth, resizeHeight);
@@ -262,6 +267,8 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
                 currentPosition += (targetPosition - currentPosition) * settings.smoothing;
 
                 const currentVelocity = Math.abs(currentPosition - prevPos) / deltaTime;
+                const scrollDelta = currentPosition - prevPos;
+                const scrollDirection = Math.sign(scrollDelta);
                 velocityHistory.push(currentVelocity);
                 velocityHistory.shift();
 
@@ -285,6 +292,7 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
                 }
 
                 currentDistortionFactor += (targetDistortionFactor - currentDistortionFactor) * settings.distortionSmoothing;
+                const targetTilt = settings.maxTiltAngle * currentDistortionFactor * scrollDirection;
 
                 slides.forEach((slide, i) => {
                     let baseY = i * slideUnit - currentPosition;
@@ -297,8 +305,13 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
                     slide.userData.targetY = baseY;
                     slide.userData.currentY += (slide.userData.targetY - slide.userData.currentY) * settings.slideLerp;
 
-                    slide.position.y = slide.userData.currentY;
-                    updateCurve(slide, slide.position.y, currentDistortionFactor);
+                    const wrapThreshold = totalHeight / 2 + slideHeight;
+                    if (Math.abs(slide.userData.currentY) < wrapThreshold * 1.5) {
+                        slide.position.y = slide.userData.currentY;
+                        slide.userData.currentTilt += (targetTilt - slide.userData.currentTilt) * settings.tiltLerp;
+                        slide.rotation.x = slide.userData.currentTilt;
+                        updateCurve(slide, slide.position.y, currentDistortionFactor);
+                    }
                 });
 
                 renderer.render(scene, camera);
@@ -317,9 +330,9 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
             // Cleanup function
             cleanupRef.current = () => {
                 if (animationId) cancelAnimationFrame(animationId);
-                
+
                 window.removeEventListener('resize', handleResize);
-                
+
                 if (containerRef.current) {
                     containerRef.current.removeEventListener('wheel', handleWheel);
                     containerRef.current.removeEventListener('touchstart', handleTouchStart);
@@ -327,7 +340,7 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
                     containerRef.current.removeEventListener('touchend', handleTouchEnd);
                 }
 
-                slides.forEach(slide => {
+                slides.forEach((slide) => {
                     if (slide.geometry) slide.geometry.dispose();
                     if (slide.material) {
                         if (slide.material.map) slide.material.map.dispose();
@@ -346,7 +359,7 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
 
         // Iniciar después de un pequeño delay para asegurar que el DOM esté listo
         const timeoutId = setTimeout(initThree, 100);
-        
+
         return () => {
             clearTimeout(timeoutId);
             if (cleanupRef.current) cleanupRef.current();
@@ -354,8 +367,8 @@ export default function SliderThreeMobile({ images, project, navbarHeight }) {
     }, [images, project]);
 
     return (
-        <div 
-            ref={containerRef} 
+        <div
+            ref={containerRef}
             className="w-full h-full"
             style={{ cursor: 'grab' }}
         />

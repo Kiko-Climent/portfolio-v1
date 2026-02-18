@@ -57,9 +57,13 @@ export default function SliderThree2({ images, project, navbarHeight }) {
                 smoothing: 0.1,
                 slideLerp: 0.075,
                 distortionDecay: 0.95,
-                maxDistortion: 2.5,
-                distortionSensitivity: 0.15,
-                distortionSmoothing: 0.075,
+                maxDistortion: 0.35,
+                distortionSensitivity: 0.1,
+                distortionSmoothing: 0.06,
+                tiltStrength: 0.42,
+                bendStrength: 0.08,
+                maxTiltAngle: THREE.MathUtils.degToRad(65),
+                tiltLerp: 0.12,
             };
 
             // Slide dimensions
@@ -104,6 +108,7 @@ export default function SliderThree2({ images, project, navbarHeight }) {
                 mesh.userData = {
                     originalVertices: [...geometry.attributes.position.array],
                     index,
+                    currentTilt: 0,
                 };
 
                 // Cargar imagen
@@ -146,23 +151,27 @@ export default function SliderThree2({ images, project, navbarHeight }) {
             });
 
             // Update curve distortion
-            const updateCurve = (mesh, worldPositionY, distortionFactor) => {
+            const updateCurve = (mesh, _worldPositionY, distortionFactor) => {
                 const positionAttribute = mesh.geometry.attributes.position;
                 const originalVertices = mesh.userData.originalVertices;
             
                 const slideHalfHeight = slideHeight / 2;
-                const maxCurvature = settings.maxDistortion * distortionFactor;
+                const distortionIntensity = settings.maxDistortion * distortionFactor;
+                const tiltAmount = settings.tiltStrength * distortionIntensity;
+                const bendAmount = settings.bendStrength * distortionIntensity;
             
                 for (let i = 0; i < positionAttribute.count; i++) {
-                    const x = originalVertices[i * 3];
                     const y = originalVertices[i * 3 + 1];
             
                     // Distancia relativa al centro de la slide (-1 a 1)
                     const relativeY = y / slideHalfHeight;
+                    const normalizedY = THREE.MathUtils.clamp(relativeY, -1, 1);
             
-                    // Aplicamos la distorsión hacia adentro usando una función tipo seno
-                    // La distorsión será máxima en el centro y se mantiene visible en los bordes
-                    const curveZ = -Math.sin((relativeY * Math.PI) / 2) * maxCurvature * 1.5;
+                    // "Medio volteo" suave: inclinación vertical con una curvatura mínima
+                    // para evitar el efecto de ola y que la parte inferior crezca demasiado.
+                    const tiltZ = -normalizedY * tiltAmount;
+                    const bendZ = -(1 - normalizedY * normalizedY) * bendAmount;
+                    const curveZ = tiltZ + bendZ;
             
                     positionAttribute.setZ(i, curveZ);
                 }
@@ -255,6 +264,8 @@ export default function SliderThree2({ images, project, navbarHeight }) {
                 currentPosition += (targetPosition - currentPosition) * settings.smoothing;
 
                 const currentVelocity = Math.abs(currentPosition - prevPos) / deltaTime;
+                const scrollDelta = currentPosition - prevPos;
+                const scrollDirection = Math.sign(scrollDelta);
                 velocityHistory.push(currentVelocity);
                 velocityHistory.shift();
 
@@ -278,6 +289,7 @@ export default function SliderThree2({ images, project, navbarHeight }) {
                 }
 
                 currentDistortionFactor += (targetDistortionFactor - currentDistortionFactor) * settings.distortionSmoothing;
+                const targetTilt = settings.maxTiltAngle * currentDistortionFactor * scrollDirection;
 
                 slides.forEach((slide, i) => {
                     let baseY = i * slideUnit - currentPosition;
@@ -293,6 +305,8 @@ export default function SliderThree2({ images, project, navbarHeight }) {
                     const wrapThreshold = totalHeight / 2 + slideHeight;
                     if (Math.abs(slide.userData.currentY) < wrapThreshold * 1.5) {
                         slide.position.y = slide.userData.currentY;
+                        slide.userData.currentTilt += (targetTilt - slide.userData.currentTilt) * settings.tiltLerp;
+                        slide.rotation.x = slide.userData.currentTilt;
                         updateCurve(slide, slide.position.y, currentDistortionFactor);
                     }
                 });

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
 const NavbarLoader = ({ onLoadingComplete }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDarkMode, toggleDarkMode } = useDarkMode(); // ⭐ USAR EL CONTEXTO
   const [showLoader, setShowLoader] = useState(true);
   const [showNavbarContent, setShowNavbarContent] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -12,10 +13,6 @@ const NavbarLoader = ({ onLoadingComplete }) => {
   const loaderRef = useRef(null);
   const squareRef = useRef(null);
   const navbarRef = useRef(null);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
 
   useEffect(() => {
     // Configuración inicial
@@ -96,7 +93,6 @@ const NavbarLoader = ({ onLoadingComplete }) => {
         
         // Movimiento vertical primero
         setTimeout(() => {
-          // ⭐ VERIFICAR QUE EL REF EXISTE
           if (squareRef.current) {
             squareRef.current.style.transition = 'all 0.8s cubic-bezier(0.9, 0, 0.1, 1)';
             squareRef.current.style.top = '1.7rem';
@@ -105,7 +101,6 @@ const NavbarLoader = ({ onLoadingComplete }) => {
         
         // Luego movimiento horizontal
         setTimeout(() => {
-          // ⭐ VERIFICAR QUE EL REF EXISTE
           if (squareRef.current) {
             squareRef.current.style.left = 'calc(100% - 1.5rem)';
             squareRef.current.style.transform = 'translate(-50%, -50%)';
@@ -185,7 +180,6 @@ const NavbarLoader = ({ onLoadingComplete }) => {
 
   // Función auxiliar para rotación
   const animateRotation = (element, duration) => {
-    // ⭐ VERIFICAR QUE EL ELEMENTO EXISTE
     if (!element) return { stop: () => {} };
     
     let startTime = null;
@@ -196,7 +190,6 @@ const NavbarLoader = ({ onLoadingComplete }) => {
       const elapsed = timestamp - startTime;
       
       const rotation = (elapsed / (duration * 1000)) * 360;
-      // ⭐ VERIFICAR ANTES DE MODIFICAR
       if (element && element.style) {
         element.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
       }
