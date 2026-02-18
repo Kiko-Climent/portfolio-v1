@@ -40,6 +40,48 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const root = document.documentElement;
+
+    const updateBottomUiOffset = () => {
+      if (window.innerWidth >= 768) {
+        root.style.setProperty('--mobile-bottom-ui-offset', '0px');
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      let occludedBottom = 0;
+
+      if (viewport) {
+        occludedBottom = Math.max(
+          0,
+          window.innerHeight - viewport.height - viewport.offsetTop
+        );
+      }
+
+      root.style.setProperty(
+        '--mobile-bottom-ui-offset',
+        `${Math.round(occludedBottom)}px`
+      );
+    };
+
+    const viewport = window.visualViewport;
+
+    updateBottomUiOffset();
+    window.addEventListener('resize', updateBottomUiOffset);
+    window.addEventListener('orientationchange', updateBottomUiOffset);
+    viewport?.addEventListener('resize', updateBottomUiOffset);
+    viewport?.addEventListener('scroll', updateBottomUiOffset);
+
+    return () => {
+      window.removeEventListener('resize', updateBottomUiOffset);
+      window.removeEventListener('orientationchange', updateBottomUiOffset);
+      viewport?.removeEventListener('resize', updateBottomUiOffset);
+      viewport?.removeEventListener('scroll', updateBottomUiOffset);
+      root.style.setProperty('--mobile-bottom-ui-offset', '0px');
+    };
+  }, []);
+
+  useEffect(() => {
     if (clickedProject === null) {
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR

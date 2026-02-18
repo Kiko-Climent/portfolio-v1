@@ -45,7 +45,8 @@ export default function ProjectImageSliderMobile({ project }) {
                 style={{ 
                     zIndex: 30,
                     pointerEvents: 'none',
-                    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
+                    bottom:
+                        'calc(max(env(safe-area-inset-bottom, 0px), var(--mobile-bottom-ui-offset, 0px), 40px) + 1rem)',
                 }}
             >
                 <div className="text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
