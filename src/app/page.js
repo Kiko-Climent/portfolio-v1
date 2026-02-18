@@ -17,7 +17,6 @@ export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileViewportHeight, setMobileViewportHeight] = useState(null);
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
   const [isMobileReady, setIsMobileReady] = useState(false);
   const [showSlider, setShowSlider] = useState(false);
@@ -41,33 +40,35 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const updateViewportHeight = () => {
+    const root = document.documentElement;
+
+    const updateBottomOverlay = () => {
       if (window.innerWidth >= 768) {
-        setMobileViewportHeight(null);
+        root.style.setProperty('--mobile-bottom-overlay', '0px');
         return;
       }
 
       const viewport = window.visualViewport;
-      if (viewport?.height) {
-        setMobileViewportHeight(Math.round(viewport.height));
-        return;
-      }
+      const occludedBottom = viewport
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0;
 
-      setMobileViewportHeight(window.innerHeight);
+      root.style.setProperty('--mobile-bottom-overlay', `${Math.round(occludedBottom)}px`);
     };
 
     const viewport = window.visualViewport;
-    updateViewportHeight();
-    window.addEventListener('resize', updateViewportHeight);
-    window.addEventListener('orientationchange', updateViewportHeight);
-    viewport?.addEventListener('resize', updateViewportHeight);
-    viewport?.addEventListener('scroll', updateViewportHeight);
+    updateBottomOverlay();
+    window.addEventListener('resize', updateBottomOverlay);
+    window.addEventListener('orientationchange', updateBottomOverlay);
+    viewport?.addEventListener('resize', updateBottomOverlay);
+    viewport?.addEventListener('scroll', updateBottomOverlay);
 
     return () => {
-      window.removeEventListener('resize', updateViewportHeight);
-      window.removeEventListener('orientationchange', updateViewportHeight);
-      viewport?.removeEventListener('resize', updateViewportHeight);
-      viewport?.removeEventListener('scroll', updateViewportHeight);
+      window.removeEventListener('resize', updateBottomOverlay);
+      window.removeEventListener('orientationchange', updateBottomOverlay);
+      viewport?.removeEventListener('resize', updateBottomOverlay);
+      viewport?.removeEventListener('scroll', updateBottomOverlay);
+      root.style.setProperty('--mobile-bottom-overlay', '0px');
     };
   }, []);
 
@@ -130,7 +131,7 @@ export default function Home() {
       className="relative overflow-hidden"
       style={{
         width: '100vw',
-        height: isMobile && mobileViewportHeight ? `${mobileViewportHeight}px` : '100dvh',
+        height: '100dvh',
         minHeight: '100vh',
       }}
     >

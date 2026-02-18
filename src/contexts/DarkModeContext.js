@@ -10,13 +10,16 @@ export function DarkModeProvider({ children }) {
   const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
   useEffect(() => {
-    // Cargar preferencia del usuario una vez montado el cliente.
+    // Cargar preferencia solo si el usuario ya la cambió explícitamente.
     const saved = localStorage.getItem('darkMode');
-    if (saved !== null) {
+    const hasUserPreference = localStorage.getItem('hasUserThemePreference') === 'true';
+
+    if (hasUserPreference && saved !== null) {
       setIsDarkMode(saved === 'true');
     } else {
-      // Fallback: respetar una clase preexistente solo si existe.
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
+      // Default estable: siempre arrancar en light mode.
+      setIsDarkMode(false);
+      localStorage.setItem('darkMode', 'false');
     }
     setIsThemeLoaded(true);
   }, []);
@@ -39,6 +42,7 @@ export function DarkModeProvider({ children }) {
   }, [isDarkMode, isThemeLoaded]);
 
   const toggleDarkMode = () => {
+    localStorage.setItem('hasUserThemePreference', 'true');
     setIsDarkMode(prev => !prev);
   };
 
