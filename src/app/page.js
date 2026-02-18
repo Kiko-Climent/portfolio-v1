@@ -79,9 +79,20 @@ export default function Home() {
       }
 
       const viewport = window.visualViewport;
-      const bottomInset = viewport
+      const visualViewportInset = viewport
         ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
         : 0;
+
+      // Algunos navegadores Android reportan 0 aquí aunque la barra tape contenido.
+      const browserUiInset = Math.max(0, window.outerHeight - window.innerHeight);
+      const normalizedBrowserInset = Math.min(browserUiInset, 120);
+      const fallbackInset = 48;
+
+      const bottomInset = Math.max(
+        visualViewportInset,
+        normalizedBrowserInset,
+        fallbackInset
+      );
 
       root.style.setProperty('--mobile-bottom-inset', `${Math.round(bottomInset)}px`);
     };
