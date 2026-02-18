@@ -160,7 +160,7 @@ export default function Home() {
       className="relative overflow-hidden"
       style={{
         width: '100vw',
-        height: '100dvh',
+        height: isMobile ? '100svh' : '100dvh',
         minHeight: '100vh',
       }}
     >

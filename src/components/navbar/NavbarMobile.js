@@ -217,14 +217,15 @@ const NavbarMobile = ({ onReady }) => {
   return (
     <div
       className={`${isDarkMode ? 'text-white' : 'text-black'} transition-colors duration-300`}
-      style={{ height: '100dvh' }}
+      style={{ height: '100svh' }}
     >
       {/* Loader */}
       {showLoader && (
         <div
           ref={loaderRef}
-          className="fixed top-0 left-0 w-full h-screen flex justify-center items-center z-50"
+          className="fixed top-0 left-0 w-full flex justify-center items-center z-50"
           style={{ 
+            height: '100svh',
             opacity: isTransitioning ? 0 : 1,
             transition: 'opacity 0.5s ease-out',
             pointerEvents: isTransitioning ? 'none' : 'auto',
