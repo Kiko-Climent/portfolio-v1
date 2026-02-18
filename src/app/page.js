@@ -15,6 +15,7 @@ import NavbarLoader from '@/components/navbar/NavbarLoader';
 
 export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
+  const [footerHoveredProject, setFooterHoveredProject] = useState(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
@@ -116,19 +117,21 @@ export default function Home() {
   }, []);
 
   const selectedProject = clickedProject ? projects[clickedProject] : null;
-  const hoveredProject = activeProject && !clickedProject ? projects[activeProject] : null;
+  const hoveredProject = footerHoveredProject && !clickedProject ? projects[footerHoveredProject] : null;
   const shouldShowMobileBackground = isMobile && isMobileReady && clickedProject === null;
 
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
       setClickedProject(null);
       setActiveProject(null);
+      setFooterHoveredProject(null);
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR
       return;
     }
 
     setActiveProject(null);
+    setFooterHoveredProject(null);
     
     setTimeout(() => {
       setClickedProject(projectId);
@@ -139,7 +142,12 @@ export default function Home() {
     setIsLoadingComplete(true);
   };
 
-  const handleHover = (projectId) => {
+  const handleFooterHover = (projectId) => {
+    setActiveProject(projectId);
+    setFooterHoveredProject(projectId);
+  };
+
+  const handleGridHover = (projectId) => {
     setActiveProject(projectId);
   };
 
@@ -172,6 +180,7 @@ export default function Home() {
             activeProject={activeProject} 
             clickedProject={clickedProject}
             isVisible={isLoadingComplete}
+            onHover={handleGridHover}
           />
         </div>
       ) : null}
@@ -205,7 +214,8 @@ export default function Home() {
           }}
         >
           <Footer3 
-            onHover={handleHover}
+            activeProject={activeProject}
+            onHover={handleFooterHover}
             onProjectClick={handleProjectClick}
             isVisible={isLoadingComplete}
           />

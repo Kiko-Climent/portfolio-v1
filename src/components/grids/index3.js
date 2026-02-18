@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { projects } from '@/components/data/projects';
 import WaveImage from '@/components/tools/WaveImage';
 
-export default function PortfolioGridThree({ activeProject, clickedProject, isVisible = true }) {
+export default function PortfolioGridThree({ activeProject, clickedProject, isVisible = true, onHover }) {
   const images = [];
 
   // Johnny: índices 0-12 (13 imágenes)
@@ -223,8 +223,14 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
                     transition: `opacity 0.7s ease-in ${animationDelay}ms`
                   })
                 }}
-                onMouseEnter={() => setHoveredImage(image)}
-                onMouseLeave={() => setHoveredImage(null)}
+                onMouseEnter={() => {
+                  setHoveredImage(image);
+                  onHover?.(image.project);
+                }}
+                onMouseLeave={() => {
+                  setHoveredImage(null);
+                  onHover?.(null);
+                }}
               >
                 <img
                   src={image.src}

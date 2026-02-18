@@ -8,7 +8,7 @@ import { useDarkMode } from '@/contexts/DarkModeContext';
 // Registrar el plugin SplitText
 gsap.registerPlugin(SplitText);
 
-export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
+export default function Footer3({ activeProject, onHover, onProjectClick, isVisible = true }) {
     const { isDarkMode } = useDarkMode();
     const items = [
       { title: "Johnny Carretes", number: "01", id: "johnny" },
@@ -25,6 +25,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
     const clickedTitleContainerRef = useRef(null);
     const [clickedNumber, setClickedNumber] = useState(null);
     const [hoveredId, setHoveredId] = useState(null);
+    const effectiveActiveId = hoveredId || activeProject;
 
     // Inicializar SplitText cuando el componente se monta
     useEffect(() => {
@@ -397,7 +398,7 @@ export default function Footer3({ onHover, onProjectClick, isVisible = true }) {
               key={number}
               className="flex justify-between cursor-pointer transition-colors duration-300 ease-in-out"
               style={{
-                opacity: hoveredId && hoveredId !== id ? 0.5 : 1
+                opacity: effectiveActiveId && effectiveActiveId !== id ? 0.5 : 1
               }}
               onMouseEnter={() => {
                 if (id && !clickedNumber) {

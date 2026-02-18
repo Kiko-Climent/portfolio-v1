@@ -15,7 +15,7 @@ export default function FooterMobile({ onProjectClick }) {
     { title: "Salon Vilarnau", number: "02", id: "salon" },
     { title: "Against Low Trends", number: "03", id: "alt" },
     { title: "Acid Discos", number: "04", id: "acid" },
-    { title: "About", number: "Me", id: null },
+    { title: "About", number: "Me", id: "about" },
   ];
 
   const titleRefs = useRef({});

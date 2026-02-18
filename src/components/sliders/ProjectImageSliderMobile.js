@@ -28,16 +28,20 @@ export default function ProjectImageSliderMobile({ project }) {
         return () => window.removeEventListener('resize', updateNavbarHeight);
     }, []);
 
+    const isAbout = project.id === 'about';
+
     return (
         <div className="absolute inset-0 w-full h-full" style={{ zIndex: 20 }}>
-            {/* SLIDER THREE.JS - Ocupa toda la pantalla */}
-            <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25 }}>
-                <SliderThree2Mobile 
-                    images={images}
-                    project={project}
-                    navbarHeight={navbarHeight}
-                />
-            </div>
+            {/* SLIDER THREE.JS - Oculto para About Me (solo 1 foto) */}
+            {!isAbout && (
+                <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25 }}>
+                    <SliderThree2Mobile 
+                        images={images}
+                        project={project}
+                        navbarHeight={navbarHeight}
+                    />
+                </div>
+            )}
 
             {/* INFO DEL PROYECTO - BOTTOM (encima del slider, debajo del footer) */}
             <div 
@@ -49,9 +53,21 @@ export default function ProjectImageSliderMobile({ project }) {
                 }}
             >
                 <div className="text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
-                    <span style={{ color: isDarkMode ? 'white' : 'black' }}>
-                        {text.title}
-                    </span>{' '}
+                    {text.url ? (
+                        <a
+                            href={text.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: isDarkMode ? 'white' : 'black', pointerEvents: 'auto' }}
+                            className="hover:opacity-80 transition-opacity"
+                        >
+                            {text.title}
+                        </a>
+                    ) : (
+                        <span style={{ color: isDarkMode ? 'white' : 'black' }}>
+                            {text.title}
+                        </span>
+                    )}{' '}
                     <span 
                         style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }} 
                         className="lowercase"

@@ -141,7 +141,19 @@ export default function ProjectImageSlider({ project }) {
         <div className="flex absolute w-full h-screen">
             <div className='w-1/2'>
                 <div className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
-                    <span style={{ color: isDarkMode ? 'white' : 'black' }}>{text.title}</span>{' '}
+                    {text.url ? (
+                        <a
+                            href={text.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: isDarkMode ? 'white' : 'black' }}
+                            className="hover:opacity-80 transition-opacity"
+                        >
+                            {text.title}
+                        </a>
+                    ) : (
+                        <span style={{ color: isDarkMode ? 'white' : 'black' }}>{text.title}</span>
+                    )}{' '}
                     <span style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }} className="lowercase">
                         {text.description}
                     </span>

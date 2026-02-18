@@ -40,9 +40,20 @@ export default function ProjectImageSliderStatic({ project }) {
             {/* Texto izquierda */}
             <div className="w-1/2">
                 <div className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
-                    <span className="text-black dark:text-white">
-                        {text.title}
-                    </span>{' '}
+                    {text.url ? (
+                        <a
+                            href={text.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-black dark:text-white hover:opacity-80 transition-opacity"
+                        >
+                            {text.title}
+                        </a>
+                    ) : (
+                        <span className="text-black dark:text-white">
+                            {text.title}
+                        </span>
+                    )}{' '}
                     <span className="text-gray-500 dark:text-gray-400 lowercase">
                         {text.description}
                     </span>

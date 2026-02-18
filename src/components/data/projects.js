@@ -24,6 +24,7 @@ export const projects = {
         ],
         text: {
           title: 'vilarnau.de',
+          url: 'https://www.vilarnau.de/',
           description: 'Hair salon, Web & Interaction, Clean Layout, Fast Motion, Editorial Design, Minimal Storytelling, Layered UI, Fluid Scroll, Modern Typography, Headless Tech, Next.js, JavaScript, GSAP, Framer Motion, Vercel, TailwindCSS, Motion UI, Responsive.'
         }
       },
@@ -69,6 +70,7 @@ export const projects = {
         ],
         text: {
           title: 'johnnycarretes.com',
+          url: 'https://www.johnnycarretes.com/',
           description: 'analog photography, portfolio, immersive experience, infinite canvas, 3D, creative, web aesthetic, brutalist design, strong immagery, editorial, Next.js, JavaScript, GSAP, Framer Motion, Three.js, Shaders, Vercel, TailwindCSS, Motion UI, Responsive.'
         }
       },
@@ -108,6 +110,7 @@ export const projects = {
         ],
         text: {
           title: 'againstlt.com',
+          url: 'https://againstlt.com/',
           description: 'booking agency, dj, techno, dark, underground, big typography, Next.js, Firebase, Javascriptt, Framer Motion, TailwindCss, Responsive,'
         }
       },
@@ -142,6 +145,7 @@ export const projects = {
         ],
         text: {
           title: 'acid-discos.mmdiscos.com',
+          url: 'https://acid-discos.mmdiscos.com/',
           description: 'record label, underground, 90s style, big typography, audio player, React, javascript, firebase, tailwindcss, responsive'
         }
       },
