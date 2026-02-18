@@ -21,6 +21,25 @@ export default function Home() {
   const [isMobileReady, setIsMobileReady] = useState(false);
   const [showSlider, setShowSlider] = useState(false);
   const [hideSlider, setHideSlider] = useState(false); // ⭐ NUEVO ESTADO
+  const [viewportHeight, setViewportHeight] = useState(null);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => setViewportHeight(vv.height);
+
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -69,48 +88,7 @@ export default function Home() {
     };
   }, [isMobile]);
 
-  useEffect(() => {
-    const root = document.documentElement;
-
-    const updateBottomInset = () => {
-      if (window.innerWidth >= 768) {
-        root.style.setProperty('--mobile-bottom-inset', '0px');
-        return;
-      }
-    
-      const vv = window.visualViewport;
-      if (!vv) {
-        root.style.setProperty('--mobile-bottom-inset', '24px');
-        return;
-      }
-    
-      // La diferencia real entre el viewport del layout y el visual
-      // Esto captura tanto la barra del navegador como el nav gesture bar de Android
-      const bottomOffset = Math.max(
-        0,
-        window.innerHeight - (vv.offsetTop + vv.height)
-      );
-    
-      root.style.setProperty('--mobile-bottom-inset', `${bottomOffset}px`);
-    };
-    
-    // ⚠️ Añade también el evento 'scroll' del visualViewport
-    // (en Android, la barra se mueve con scroll del visualViewport, no del window)
-    const viewport = window.visualViewport;
-    updateBottomInset();
-    window.addEventListener('resize', updateBottomInset);
-    window.addEventListener('orientationchange', updateBottomInset);
-    viewport?.addEventListener('resize', updateBottomInset);
-    viewport?.addEventListener('scroll', updateBottomInset); // ← añade esto
-
-    return () => {
-      window.removeEventListener('resize', updateBottomInset);
-      window.removeEventListener('orientationchange', updateBottomInset);
-      viewport?.removeEventListener('resize', updateBottomInset);
-      root.style.setProperty('--mobile-bottom-inset', '0px');
-      viewport?.removeEventListener('scroll', updateBottomInset);
-    };
-  }, []);
+  
 
   useEffect(() => {
     if (clickedProject === null) {
@@ -171,9 +149,10 @@ export default function Home() {
       className="relative overflow-hidden"
       style={{
         width: '100vw',
-        height: '100dvh',
-        minHeight: '100vh',
+        height: isMobile && viewportHeight ? `${viewportHeight}px` : '100dvh',
+        ...(isMobile ? {} : { minHeight: '100vh' }),
       }}
+      
     >
       {isMobile ? (
         <NavbarMobile onReady={() => setIsMobileReady(true)} />
