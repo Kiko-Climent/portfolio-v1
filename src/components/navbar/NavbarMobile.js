@@ -248,10 +248,10 @@ const NavbarMobile = ({ onReady }) => {
               <textPath href="#loader-square-1" startOffset="25%" textLength="300" lengthAdjust="spacing">Kiko Climent</textPath>
             </text>
             <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
-              <textPath href="#loader-square-2" startOffset="26%" textLength="320" lengthAdjust="spacing">Fullstack</textPath>
+              <textPath href="#loader-square-2" startOffset="26%" textLength="320" lengthAdjust="spacing">Frontend</textPath>
             </text>
             <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
-              <textPath href="#loader-square-3" startOffset="28%" textLength="320" lengthAdjust="spacing">Web Developer</textPath>
+              <textPath href="#loader-square-3" startOffset="28%" textLength="320" lengthAdjust="spacing">Developer</textPath>
             </text>
             <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-4" startOffset="27%" textLength="260" lengthAdjust="spacing">Creative Code</textPath>
@@ -295,7 +295,7 @@ const NavbarMobile = ({ onReady }) => {
         <div className="flex flex-col gap-y-1">
           <h1 className="py-1.5">Kiko Climent</h1>
           <h2 className="py-1.5">Portfolio 2026</h2>
-          <h2 className="py-1.5">Fullstack Web Developer</h2>
+          <h2 className="py-1.5">Creative Frontend Developer</h2>
         </div>
       </div>
     </div>

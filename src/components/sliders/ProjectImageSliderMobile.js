@@ -43,22 +43,37 @@ export default function ProjectImageSliderMobile({ project }) {
                 </div>
             )}
 
-            {/* INFO DEL PROYECTO - BOTTOM (encima del slider, debajo del footer) */}
-            <div 
+            {/* INFO DEL PROYECTO — misma barra inferior en todos (About: + back home; texto largo con scroll local) */}
+            <div
                 className="absolute left-4 right-4"
-                style={{ 
+                style={{
                     zIndex: 30,
-                    pointerEvents: 'none',
-                    bottom: 'calc(1rem + max(var(--mobile-bottom-inset, 0px), env(safe-area-inset-bottom, 0px)))',
+                    pointerEvents: isAbout ? 'auto' : 'none',
+                    bottom:
+                        'calc(1rem + max(var(--mobile-bottom-inset, 0px), env(safe-area-inset-bottom, 0px)))',
                 }}
             >
-                <div className="text-[clamp(1.2rem,1.75vw,1.75rem)] font-semibold leading-[1.1]">
+                <div
+                    className="text-[clamp(1.2rem,1.75vw,1.75rem)] font-semibold leading-[1.1]"
+                    style={
+                        isAbout
+                            ? {
+                                  maxHeight: `calc(100dvh - ${navbarHeight}px - 3.5rem)`,
+                                  overflowY: 'auto',
+                                  overscrollBehavior: 'contain',
+                              }
+                            : undefined
+                    }
+                >
                     {text.url ? (
                         <a
                             href={text.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: isDarkMode ? 'white' : 'black', pointerEvents: 'auto' }}
+                            style={{
+                                color: isDarkMode ? 'white' : 'black',
+                                pointerEvents: 'auto',
+                            }}
                             className="hover:opacity-80 transition-opacity"
                         >
                             {text.title}
@@ -68,12 +83,25 @@ export default function ProjectImageSliderMobile({ project }) {
                             {text.title}
                         </span>
                     )}{' '}
-                    <span 
-                        style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }} 
+                    <span
+                        style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
                         className="lowercase"
                     >
                         {text.description}
                     </span>
+                    {isAbout ? (
+                        <>
+                            {' '}
+                            <button
+                                type="button"
+                                className="inline cursor-pointer underline-offset-2 hover:opacity-80"
+                                style={{ color: isDarkMode ? 'white' : 'black' }}
+                                onClick={() => window.__footerMobileRequestBack?.()}
+                            >
+                                back home
+                            </button>
+                        </>
+                    ) : null}
                 </div>
             </div>
         </div>

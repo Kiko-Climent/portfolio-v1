@@ -239,10 +239,10 @@ const NavbarLoader = ({ onLoadingComplete }) => {
               <textPath href="#loader-square-1" startOffset="25%" textLength="300">Kiko Climent</textPath>
             </text>
             <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-2" startOffset="26%" textLength="280">Fullstack</textPath>
+              <textPath href="#loader-square-2" startOffset="26%" textLength="280">Frontend</textPath>
             </text>
             <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
-              <textPath href="#loader-square-3" startOffset="28%" textLength="240">Web Developer</textPath>
+              <textPath href="#loader-square-3" startOffset="28%" textLength="240">Developer</textPath>
             </text>
             <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-4" startOffset="27%" textLength="260">Creative Code</textPath>
@@ -289,7 +289,7 @@ const NavbarLoader = ({ onLoadingComplete }) => {
           <h2>Portfolio 2026</h2>
         </div>
         <div className="w-1/2 flex flex-col">
-          <p>Fullstack Web Developer</p>
+          <p>Creative Frontend Developer</p>
           <p>climent.kiko@gmail.com</p>
           <p>(+49) 176 58260660</p>
         </div>

@@ -84,15 +84,68 @@ export default function FooterMobile({ onProjectClick }) {
     }
   }, [isDarkMode]);
 
+  const beginRestoreFooterMenu = () => {
+    setTimeout(() => {
+      items.forEach(({ number: itemNumber }, index) => {
+        const titleSplit = splitInstances.current[`title-${itemNumber}`];
+        const numberSplit = splitInstances.current[`number-${itemNumber}`];
+        const titleEl = titleRefs.current[itemNumber];
+        const containerEl = titleEl?.parentElement;
+
+        if (titleSplit && numberSplit && containerEl) {
+          gsap.set(containerEl, { display: 'flex' });
+
+          const allChars = [...titleSplit.chars, ...numberSplit.chars];
+          const reverseDelay = (items.length - 1 - index) * 0.3;
+
+          gsap.fromTo(
+            allChars,
+            { x: '100vw' },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 1.5,
+              ease: 'power2.out',
+              stagger: {
+                amount: 0.8,
+                from: 'end',
+              },
+              delay: reverseDelay,
+            }
+          );
+        }
+      });
+
+      setTimeout(() => {
+        setClickedNumber(null);
+        if (onProjectClick) {
+          onProjectClick(null);
+        }
+      }, 2000);
+    }, 800);
+  };
+
   // Función para volver al menú inicial
   const handleBack = () => {
-    // ⭐ NOTIFICAR QUE EMPIEZA EL BACK (ocultar slider)
     if (window.__footerBackStarted) {
       window.__footerBackStarted();
     }
 
-    // Ocultar el botón de back letra por letra
     const backButtonSplit = splitInstances.current[`back-button`];
+    const clickedTitleSplit = splitInstances.current[`clicked-title`];
+    const hasCenterUi =
+      clickedTitleSplit && clickedTitleContainerRef.current;
+
+    // About: no hay título ni "back home" en el centro; solo restaurar menú
+    if (!hasCenterUi) {
+      if (clickedTitleContainerRef.current) {
+        clickedTitleContainerRef.current.innerHTML = '';
+        gsap.set(clickedTitleContainerRef.current, { display: 'none' });
+      }
+      beginRestoreFooterMenu();
+      return;
+    }
+
     if (backButtonSplit && backButtonRef.current) {
       gsap.to(backButtonSplit.chars, {
         x: '100vw',
@@ -106,12 +159,10 @@ export default function FooterMobile({ onProjectClick }) {
           if (backButtonRef.current) {
             gsap.set(backButtonRef.current, { display: 'none' });
           }
-        }
+        },
       });
     }
 
-    // Ocultar el título clickeado
-    const clickedTitleSplit = splitInstances.current[`clicked-title`];
     if (clickedTitleSplit && clickedTitleContainerRef.current) {
       gsap.to(clickedTitleSplit.chars, {
         x: '100vw',
@@ -123,74 +174,35 @@ export default function FooterMobile({ onProjectClick }) {
         },
         onComplete: () => {
           gsap.set(clickedTitleContainerRef.current, { display: 'none' });
-          
-          // Revertir SplitText del título clickeado
-          if (clickedTitleSplit && clickedTitleSplit.revert) {
+
+          if (clickedTitleSplit?.revert) {
             clickedTitleSplit.revert();
           }
           delete splitInstances.current[`clicked-title`];
-          
-          // Revertir SplitText del botón back
-          if (backButtonSplit && backButtonSplit.revert) {
+
+          if (backButtonSplit?.revert) {
             backButtonSplit.revert();
           }
           delete splitInstances.current[`back-button`];
-          
-          // ⭐ ESPERAR A QUE EL SLIDER DESAPAREZCA (800ms) ANTES DE MOSTRAR LOS TÍTULOS
-          setTimeout(() => {
-            // Restaurar el menú
-            items.forEach(({ number: itemNumber }, index) => {
-              const titleSplit = splitInstances.current[`title-${itemNumber}`];
-              const numberSplit = splitInstances.current[`number-${itemNumber}`];
-              const titleEl = titleRefs.current[itemNumber];
-              const numberEl = numberRefs.current[itemNumber];
-              const containerEl = titleEl?.parentElement;
 
-              if (titleSplit && numberSplit && containerEl) {
-                // Mostrar el contenedor
-                gsap.set(containerEl, { display: 'flex' });
-
-                // Animar chars del título y caracteres del número de vuelta
-                const allChars = [...titleSplit.chars, ...numberSplit.chars];
-                
-                // Delay inverso para que aparezcan en orden inverso
-                const reverseDelay = (items.length - 1 - index) * 0.3;
-                
-                gsap.fromTo(allChars,
-                  { x: '100vw' },
-                  {
-                    x: 0,
-                    opacity: 1,
-                    duration: 1.5,
-                    ease: 'power2.out',
-                    stagger: {
-                      amount: 0.8,
-                      from: 'end',
-                    },
-                    delay: reverseDelay
-                  }
-                );
-              }
-            });
-
-            // Resetear el estado después de un delay
-            setTimeout(() => {
-              setClickedNumber(null);
-              
-              // Notificar al componente padre que se cerró el proyecto
-              if (onProjectClick) {
-                onProjectClick(null);
-              }
-            }, 2000);
-          }, 800); // ⭐ Esperar 800ms (duración del fade out del slider)
-        }
+          beginRestoreFooterMenu();
+        },
       });
     }
   };
 
+  const handleBackRef = useRef(null);
+  handleBackRef.current = handleBack;
+
+  useEffect(() => {
+    window.__footerMobileRequestBack = () => handleBackRef.current?.();
+    return () => {
+      delete window.__footerMobileRequestBack;
+    };
+  }, []);
+
   // Función para animar la salida de los elementos no seleccionados
   const handleClick = (number, id) => {
-    // No hacer nada si ya hay uno clickeado o si no hay id (About Me)
     if (clickedNumber || !id) return;
     
     setClickedNumber(number);
@@ -247,6 +259,13 @@ export default function FooterMobile({ onProjectClick }) {
         totalDelay = Math.max(totalDelay, itemDelay + 2.5 + 1.2);
       }
     });
+
+    if (id === 'about') {
+      setTimeout(() => {
+        window.__footerAnimationComplete?.();
+      }, totalDelay * 1000);
+      return;
+    }
 
     // Segundo: después de que todos salgan, mostrar el título clickeado en el centro, pegado a la izquierda
     if (clickedTitleSplit && clickedTitleEl && clickedItem) {
