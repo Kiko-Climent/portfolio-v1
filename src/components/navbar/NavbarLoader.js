@@ -235,22 +235,22 @@ const NavbarLoader = ({ onLoadingComplete }) => {
             <path id="loader-square-5" d="M 330,500 L 330,330 L 670,330 L 670,670 L 330,670 L 330,500" fill="none" />
             <path id="loader-square-6" d="M 400,500 L 400,400 L 600,400 L 600,600 L 400,600 L 400,500" fill="none" />
 
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-1" startOffset="25%" textLength="300">Kiko Climent</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-2" startOffset="26%" textLength="280">Frontend</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-3" startOffset="28%" textLength="240">Developer</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-4" startOffset="27%" textLength="260">Creative Code</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-5" startOffset="25%" textLength="290">Portfolio</textPath>
             </text>
-            <text className="orbit-text uppercase text-[clamp(1.25rem,2vw,1.5rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] transition-opacity duration-700" style={{ opacity: 0 }}>
               <textPath href="#loader-square-6" startOffset="26%" textLength="200">2026</textPath>
             </text>
           </svg>
@@ -281,7 +281,7 @@ const NavbarLoader = ({ onLoadingComplete }) => {
       <div 
         ref={navbarRef}
         data-navbar
-        className="flex top-4 left-4 right-4 leading-none z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95] absolute transition-opacity duration-500"
+        className="flex top-4 left-4 right-4  z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] absolute transition-opacity duration-500"
         style={{ opacity: showNavbarContent ? 1 : 0 }}
       >
         <div className="w-1/2 flex flex-col">

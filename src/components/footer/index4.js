@@ -43,7 +43,7 @@ export default function Footer4({ activeProject, onHover, onProjectClick, isVisi
     { title: 'Johnny Carretes', number: '01', id: 'johnny' },
     { title: 'Salon Vilarnau',  number: '02', id: 'salon'  },
     { title: 'Against Low Trends', number: '03', id: 'alt'  },
-    { title: 'Acid Discos',     number: '04', id: 'acid'   },
+    { title: 'MM Discos',       number: '04', id: 'mmdiscos' },
     { title: 'About',           number: 'Me', id: 'about'  },
   ];
 

@@ -14,7 +14,7 @@ export default function FooterMobile({ onProjectClick }) {
     { title: "Johnny Carretes", number: "01", id: "johnny" },
     { title: "Salon Vilarnau", number: "02", id: "salon" },
     { title: "Against Low Trends", number: "03", id: "alt" },
-    { title: "Acid Discos", number: "04", id: "acid" },
+    { title: "MM Discos", number: "04", id: "mmdiscos" },
     { title: "About", number: "Me", id: "about" },
   ];
 
@@ -416,12 +416,12 @@ export default function FooterMobile({ onProjectClick }) {
       {/* Contenedor para el título clickeado (centro de la interfaz, pegado a la izquierda) */}
       <div
         ref={clickedTitleContainerRef}
-        className="absolute top-1/2 left-4 -translate-y-1/2 z-50 text-[clamp(1.2rem,1.75vw,1.75rem)] font-semibold leading-[1.1] whitespace-nowrap"
+        className="absolute top-1/2 left-4 -translate-y-1/2 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] whitespace-nowrap"
         style={{ display: 'none' }}
       />
 
       <div
-        className="absolute left-4 right-4 z-50 text-[clamp(1.2rem,1.75vw,1.75rem)] font-semibold leading-[1.1]"
+        className="absolute left-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1]"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex flex-col gap-y-1 whitespace-nowrap relative w-full">

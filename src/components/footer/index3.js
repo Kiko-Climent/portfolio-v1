@@ -14,7 +14,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
       { title: "Johnny Carretes", number: "01", id: "johnny" },
       { title: "Salon Vilarnau", number: "02", id: "salon" },
       { title: "Against Low Trends", number: "03", id: "alt" },
-      { title: "Acid Discos", number: "04", id: "acid" },
+      { title: "MM Discos", number: "04", id: "mmdiscos" },
       { title: "About", number: "Me", id: "about" },
     ];
 
@@ -371,7 +371,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
   
     return (
       <div
-        className="flex bottom-4 right-4 z-50 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95] absolute transition-opacity duration-700"
+        className="flex bottom-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[0.95] absolute transition-opacity duration-700"
         style={{
           left: '50%',
           width: 'calc(50% - 1rem)',

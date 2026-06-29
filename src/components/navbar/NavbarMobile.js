@@ -244,22 +244,22 @@ const NavbarMobile = ({ onReady }) => {
             <path id="loader-square-5" d="M 330,500 L 330,330 L 670,330 L 670,670 L 330,670 L 330,500" fill="none" />
             <path id="loader-square-6" d="M 400,500 L 400,400 L 600,400 L 600,600 L 400,600 L 400,500" fill="none" />
 
-            <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-1" startOffset="25%" textLength="300" lengthAdjust="spacing">Kiko Climent</textPath>
             </text>
-            <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-2" startOffset="26%" textLength="320" lengthAdjust="spacing">Frontend</textPath>
             </text>
-            <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-3" startOffset="28%" textLength="320" lengthAdjust="spacing">Developer</textPath>
             </text>
-            <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-4" startOffset="27%" textLength="260" lengthAdjust="spacing">Creative Code</textPath>
             </text>
-            <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-5" startOffset="25%" textLength="290" lengthAdjust="spacing">Portfolio</textPath>
             </text>
-            <text className="orbit-text uppercase text-[2.75em] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
+            <text className="orbit-text uppercase text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold transition-opacity duration-700" style={{ opacity: 0, letterSpacing: '0.18em' }}>
               <textPath href="#loader-square-6" startOffset="26%" textLength="200" lengthAdjust="spacing">2026</textPath>
             </text>
           </svg>
@@ -289,7 +289,7 @@ const NavbarMobile = ({ onReady }) => {
       {/* Navbar */}
       <div 
         ref={navbarRef}
-        className="flex top-4 left-4 right-4 z-50 text-[clamp(1.2rem,1.75vw,1.75rem)] font-semibold leading-[1.1] absolute transition-opacity duration-500"
+        className="flex top-4 left-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] absolute transition-opacity duration-500"
         style={{ opacity: showNavbarContent ? 1 : 0 }}
       >
         <div className="flex flex-col gap-y-1">

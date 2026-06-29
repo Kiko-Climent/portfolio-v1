@@ -95,18 +95,17 @@ export const projects = {
     alt: {
       id: 'alt',
       imagesPath: '/alt',
-      imagesCount: 8,
+      imagesCount: 7,
       gridLayout: [],
       slider: {
         images: [
-          { id: 1, top: '23%', left: '17%', width: '70%' },
-          { id: 2, top: '3%', left: '69%', width: '27%' },
-          { id: 3, top: '10%', left: '5%', width: '70%' },
-          { id: 4, top: '5%', left: '10%', width: '70%' },
-          { id: 5, top: '25%', left: '30%', width: '27%' },
-          { id: 6, top: '30%', left: '5%', width: '75%' },
-          { id: 7, top: '22%', left: '5%', width: '27%' },
-          { id: 8, top: '15%', left: '5%', width: '75%' },
+          { id: 9, top: '23%', left: '17%', width: '70%' },
+          { id: 10, top: '3%', left: '20%', width: '75%' },
+          { id: 11, top: '10%', left: '5%', width: '35%' },
+          { id: 12, top: '5%', left: '10%', width: '70%' },
+          { id: 13, top: '15%', left: '30%', width: '35%' },
+          { id: 14, top: '30%', left: '5%', width: '75%' },
+          { id: 15, top: '22%', left: '5%', width: '27%' },
         ],
         text: {
           title: 'againstlt.com',
@@ -116,21 +115,20 @@ export const projects = {
       },
       hover: {
         images: [
-          { id: 1, width: '75%' },
-          { id: 2, width: '35%' },
-          { id: 3, width: '75%' },
-          { id: 4, width: '75%' },
-          { id: 5, width: '35%' },
-          { id: 6, width: '75%' },
-          { id: 7, width: '35%' },
-          { id: 8, width: '75%' },
+          { id: 9, width: '75%' },
+          { id: 10, width: '75%' },
+          { id: 11, width: '35%' },
+          { id: 12, width: '75%' },
+          { id: 13, width: '35%' },
+          { id: 14, width: '75%' },
+          { id: 15, width: '75%' },
         ]
       }
     },
-    acid: {
-      id: 'acid',
-      imagesPath: '/acid',
-      imagesCount: 8,
+    mmdiscos: {
+      id: 'mmdiscos',
+      imagesPath: '/mmdiscos',
+      imagesCount: 9,
       gridLayout: [],
       slider: {
         images: [
@@ -142,11 +140,12 @@ export const projects = {
           { id: 6, top: '22%', left: '5%', width: '27%' },
           { id: 7, top: '8%', left: '35%', width: '27%' },
           { id: 8, top: '18%', left: '22%', width: '70%' },
+          { id: 9, top: '22%', left: '5%', width: '27%' },
         ],
         text: {
-          title: 'acid-discos.mmdiscos.com',
+          title: 'mmdiscos.com',
           url: 'https://acid-discos.mmdiscos.com/',
-          description: 'record label, underground, 90s style, big typography, audio player, React, javascript, firebase, tailwindcss, responsive'
+          description: 'record label, underground, balearic, white space, minimalism, swiss editorial design, Next.js, gsap, three.js, shaders, javascript, vercel, tailwindcss, responsive'
         }
       },
       hover: {
@@ -159,6 +158,7 @@ export const projects = {
           { id: 6, width: '35%' },
           { id: 7, width: '35%' },
           { id: 8, width: '75%' },
+          { id: 9, width: '75%' },
         ]
       }
     },

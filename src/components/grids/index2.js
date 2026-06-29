@@ -21,9 +21,9 @@ export default function PortfolioGrid({ activeProject, clickedProject }) {
     images.push({ src: `/alt/alt${i}.png`, project: 'alt', id: i });
   }
 
-  // Acid: índices 32-38 (7 imágenes)
-  for (let i = 1; i <= 8; i++) {
-    images.push({ src: `/acid/acid${i}.png`, project: 'acid', id: i });
+  // MMDiscos: índices 32-40 (9 imágenes)
+  for (let i = 1; i <= 9; i++) {
+    images.push({ src: `/mmdiscos/mmdiscos${i}.png`, project: 'mmdiscos', id: i });
   }
 
   const [hoveredImage, setHoveredImage] = useState(null);

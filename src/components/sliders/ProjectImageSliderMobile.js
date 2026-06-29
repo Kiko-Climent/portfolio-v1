@@ -54,7 +54,7 @@ export default function ProjectImageSliderMobile({ project }) {
                 }}
             >
                 <div
-                    className="text-[clamp(1.2rem,1.75vw,1.75rem)] font-semibold leading-[1.1]"
+                    className="text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1]"
                     style={
                         isAbout
                             ? {

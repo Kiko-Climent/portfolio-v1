@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import { DarkModeProvider } from "@/contexts/DarkModeContext";
 
 const PPNeueYorkNarrowMedium = localFont({
-  src: '../fonts/PPNeueYork-NarrowMedium.woff',
+  src: '../fonts/PPNeueMontreal-Medium.woff',
   display: 'swap',
 });
 

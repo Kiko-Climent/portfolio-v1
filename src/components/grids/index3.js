@@ -17,17 +17,17 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
     images.push({ src: `/salon/salon${i}.png`, project: 'salon', id: i });
   }
 
-  // Alt: índices 24-31 (8 imágenes)
-  for (let i = 1; i <= 8; i++) {
+  // Alt: índices 24-30 (7 imágenes)
+  for (let i = 9; i <= 15; i++) {
     images.push({ src: `/alt/alt${i}.png`, project: 'alt', id: i });
   }
 
-  // Acid: índices 32-38 (7 imágenes)
-  for (let i = 1; i <= 8; i++) {
-    images.push({ src: `/acid/acid${i}.png`, project: 'acid', id: i });
+  // MMDiscos: índices 31-39 (9 imágenes)
+  for (let i = 1; i <= 9; i++) {
+    images.push({ src: `/mmdiscos/mmdiscos${i}.png`, project: 'mmdiscos', id: i });
   }
 
-  // About: índice 40 (1 imagen)
+  // About: índice 39 (1 imagen)
   images.push({ src: `/about/about.png`, project: 'about', id: 1 });
 
   const [hoveredImage, setHoveredImage] = useState(null);

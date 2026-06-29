@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useDarkMode } from '@/contexts/DarkModeContext';
-import SliderThree from '@/components/SliderThree/index';
 import SliderThree2 from '../SliderThree/index2';
 
 export default function ProjectImageSliderThree({ project, shouldHide = false }) {
@@ -62,7 +61,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
             }}
         >
             <div className='w-1/2'>
-                <div className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.25rem,2vw,1.5rem)] leading-[0.95]">
+                <div className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1]">
                     {text.url ? (
                         <a
                             href={text.url}
