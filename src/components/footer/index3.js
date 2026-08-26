@@ -76,6 +76,8 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
   const splitInstances = useRef({});
   const backButtonRef = useRef(null);
   const clickedTitleContainerRef = useRef(null);
+  const isDarkModeRef = useRef(isDarkMode);
+  isDarkModeRef.current = isDarkMode;
   const [clickedNumber, setClickedNumber] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const effectiveActiveId = hoveredId || activeProject;
@@ -83,7 +85,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
   // ── Helpers ────────────────────────────────────────────────
   const applyColor = (chars) => {
     chars.forEach((char) => {
-      char.style.color = isDarkMode ? 'white' : 'black';
+      char.style.color = isDarkModeRef.current ? 'white' : 'black';
     });
   };
 
@@ -150,15 +152,26 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
       });
       splitInstances.current = {};
     };
-  }, [isDarkMode]);
+    // Solo al montar. Recrear SplitText al cambiar el tema destruye
+    // las instancias de "back menu" y del título del proyecto activo.
+  }, []);
 
   useEffect(() => {
+    const color = isDarkMode ? 'white' : 'black';
+
+    Object.values(splitInstances.current).forEach((split) => {
+      if (!split?.chars) return;
+      split.chars.forEach((char) => {
+        char.style.color = color;
+      });
+    });
+
     if (backButtonRef.current) {
-      backButtonRef.current.style.color = isDarkMode ? 'white' : 'black';
+      backButtonRef.current.style.color = color;
     }
     if (clickedTitleContainerRef.current) {
       const titleEl = clickedTitleContainerRef.current.querySelector('h1');
-      if (titleEl) titleEl.style.color = isDarkMode ? 'white' : 'black';
+      if (titleEl) titleEl.style.color = color;
     }
   }, [isDarkMode]);
 
@@ -313,6 +326,11 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
     // Si no había nada que sacar, ir directo al menú.
     if (!backSplit && !titleSplit) {
       tl.kill();
+      if (clickedTitleContainerRef.current) {
+        gsap.set(clickedTitleContainerRef.current, { display: 'none' });
+        clickedTitleContainerRef.current.innerHTML = '';
+      }
+      backButtonRef.current = null;
       restoreMenu();
     }
   };
@@ -351,7 +369,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
 
   return (
     <div
-      className="flex bottom-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[0.95] absolute transition-opacity duration-700"
+      className="flex bottom-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] absolute transition-opacity duration-700"
       style={{
         left: '50%',
         width: 'calc(50% - 1rem)',

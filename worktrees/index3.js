@@ -351,7 +351,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
 
   return (
     <div
-      className="flex bottom-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[0.95] absolute transition-opacity duration-700"
+      className="flex bottom-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] absolute transition-opacity duration-700"
       style={{
         left: '50%',
         width: 'calc(50% - 1rem)',

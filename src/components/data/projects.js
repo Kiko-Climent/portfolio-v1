@@ -144,7 +144,7 @@ export const projects = {
         ],
         text: {
           title: 'mmdiscos.com',
-          url: 'https://acid-discos.mmdiscos.com/',
+          url: 'https://mmdiscos.com/',
           description: 'record label, underground, balearic, white space, minimalism, swiss editorial design, Next.js, gsap, three.js, shaders, javascript, vercel, tailwindcss, responsive'
         }
       },

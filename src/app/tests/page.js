@@ -6,6 +6,13 @@ import NavbarMobile from '@/components/navbar/NavbarMobile';
 import FooterMobile from '@/components/footer/FooterMobile';
 import ProjectImageSliderMobile from '@/components/sliders/ProjectImageSliderMobile';
 import { projects } from '@/components/data/projects';
+import NavbarLoaderNew from '../../../worktrees/NavbarLoaderNew';
+import BrainStorm from '../../../worktrees/BrainStorm';
+import NavbarLoaderNew2 from '../../../worktrees/NavbarLoaderNew2';
+import NavbarLoaderNew3 from '../../../worktrees/NavbarLoaderNew3';
+import NavbarLoaderNew4 from '../../../worktrees/NavbarLoaderNew4';
+import NavbarLoaderNew5 from '../../../worktrees/NavbarLoaderNew5';
+import NavbarLoaderMobNew from '../../../worktrees/NavbarLoaderMobNew';
 
 export default function Tests() {
     const [clickedProject, setClickedProject] = useState(null);
@@ -25,10 +32,14 @@ export default function Tests() {
 
     return (
         <div className="h-screen w-screen relative overflow-hidden">
-            <NavbarMobile />
+            {/* <NavbarMobile /> */}
             {/* Slider cuando se hace click en un proyecto */}
-            {selectedProject && <ProjectImageSliderMobile project={selectedProject} />}
-            <FooterMobile onProjectClick={handleProjectClick} />
+            {/* {selectedProject && <ProjectImageSliderMobile project={selectedProject} />}
+            <FooterMobile onProjectClick={handleProjectClick} /> */}
+            {/* <NavbarLoaderNew /> */}
+            {/* <BrainStorm /> */}
+            {/* <NavbarLoaderNew5 /> */}
+            <NavbarLoaderMobNew />
         </div>
     )
 }  

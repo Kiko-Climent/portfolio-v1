@@ -11,6 +11,8 @@ import ProjectImageSliderThree from '@/components/sliders/ProjectImageSliderThre
 import ProjectImageSliderMobile from '@/components/sliders/ProjectImageSliderMobile';
 import HoverImageSlider from '@/components/sliders/index';
 import NavbarLoader from '@/components/navbar/NavbarLoader';
+import NavbarLoaderNew5 from '../../worktrees/NavbarLoaderNew5';
+import NavbarLoaderMobNew from '../../worktrees/NavbarLoaderMobNew';
 
 
 export default function Home() {
@@ -163,9 +165,9 @@ export default function Home() {
       
     >
       {isMobile ? (
-        <NavbarMobile onReady={() => setIsMobileReady(true)} />
+        <NavbarLoaderMobNew onReady={() => setIsMobileReady(true)} />
       ) : (
-        <NavbarLoader onLoadingComplete={handleLoadingComplete} />
+        <NavbarLoaderNew5 onLoadingComplete={handleLoadingComplete} />
       )}
       
       {shouldShowMobileBackground ? (

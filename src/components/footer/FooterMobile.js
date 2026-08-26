@@ -7,15 +7,53 @@ import { useDarkMode } from '@/contexts/DarkModeContext';
 
 gsap.registerPlugin(SplitText);
 
+const MASK_CUSHION = '0.25em';
+
+const ANIM = {
+  menuOut: {
+    duration: 0.5,
+    ease: 'power3.in',
+    staggerEach: 0.012,
+    rowCascade: 0.05,
+    yPercent: -140,
+  },
+  titleIn: {
+    at: 0.45,
+    duration: 0.9,
+    ease: 'power4.out',
+    staggerEach: 0.03,
+    fromYPercent: 140,
+  },
+  backIn: {
+    duration: 0.6,
+    ease: 'power4.out',
+    staggerEach: 0.022,
+    fromYPercent: 140,
+  },
+  backOut: {
+    duration: 0.45,
+    ease: 'power3.in',
+    staggerEach: 0.018,
+    yPercent: -140,
+  },
+  menuRestore: {
+    duration: 0.8,
+    ease: 'power4.out',
+    staggerEach: 0.016,
+    rowCascade: 0.06,
+    fromYPercent: 140,
+  },
+};
+
 export default function FooterMobile({ onProjectClick }) {
   const { isDarkMode } = useDarkMode();
 
   const items = [
-    { title: "Johnny Carretes", number: "01", id: "johnny" },
-    { title: "Salon Vilarnau", number: "02", id: "salon" },
-    { title: "Against Low Trends", number: "03", id: "alt" },
-    { title: "MM Discos", number: "04", id: "mmdiscos" },
-    { title: "About", number: "Me", id: "about" },
+    { title: 'Johnny Carretes', number: '01', id: 'johnny' },
+    { title: 'Salon Vilarnau', number: '02', id: 'salon' },
+    { title: 'Against Low Trends', number: '03', id: 'alt' },
+    { title: 'MM Discos', number: '04', id: 'mmdiscos' },
+    { title: 'About', number: 'Me', id: 'about' },
   ];
 
   const titleRefs = useRef({});
@@ -23,10 +61,51 @@ export default function FooterMobile({ onProjectClick }) {
   const splitInstances = useRef({});
   const backButtonRef = useRef(null);
   const clickedTitleContainerRef = useRef(null);
+  const isDarkModeRef = useRef(isDarkMode);
+  isDarkModeRef.current = isDarkMode;
 
   const [clickedNumber, setClickedNumber] = useState(null);
 
-  // Inicializar SplitText
+  const applyColor = (chars) => {
+    chars.forEach((char) => {
+      char.style.color = isDarkModeRef.current ? 'white' : 'black';
+    });
+  };
+
+  const cushionMask = (chars) => {
+    chars.forEach((char) => {
+      const wrap = char.parentElement;
+      if (!wrap) return;
+      wrap.style.paddingTop = MASK_CUSHION;
+      wrap.style.paddingBottom = MASK_CUSHION;
+      wrap.style.marginTop = `-${MASK_CUSHION}`;
+      wrap.style.marginBottom = `-${MASK_CUSHION}`;
+    });
+  };
+
+  const splitTitle = (el) => {
+    const split = new SplitText(el, {
+      type: 'words,chars',
+      mask: 'chars',
+      wordsClass: 'word',
+      charsClass: 'char',
+    });
+    const words = el.querySelectorAll('.word');
+    words.forEach((word, index) => {
+      if (index < words.length - 1) word.style.marginRight = '0.45em';
+    });
+    applyColor(split.chars);
+    cushionMask(split.chars);
+    return split;
+  };
+
+  const splitPlain = (el) => {
+    const split = new SplitText(el, { type: 'chars', mask: 'chars', charsClass: 'char' });
+    applyColor(split.chars);
+    cushionMask(split.chars);
+    return split;
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -35,27 +114,10 @@ export default function FooterMobile({ onProjectClick }) {
 
       items.forEach(({ number }) => {
         if (titleRefs.current[number]) {
-          const titleEl = titleRefs.current[number];
-          const split = new SplitText(titleEl, {
-            type: 'words,chars',
-            wordsClass: 'word',
-            charsClass: 'char',
-          });
-
-          titleEl.querySelectorAll('.word').forEach((word, i, arr) => {
-            if (i < arr.length - 1) {
-              word.style.marginRight = '0.45em';
-            }
-          });
-
-          splitInstances.current[`title-${number}`] = split;
+          splitInstances.current[`title-${number}`] = splitTitle(titleRefs.current[number]);
         }
-
         if (numberRefs.current[number]) {
-          splitInstances.current[`number-${number}`] = new SplitText(
-            numberRefs.current[number],
-            { type: 'chars', charsClass: 'char' }
-          );
+          splitInstances.current[`number-${number}`] = splitPlain(numberRefs.current[number]);
         }
       });
     }, 0);
@@ -63,135 +125,172 @@ export default function FooterMobile({ onProjectClick }) {
     return () => {
       isMounted = false;
       clearTimeout(timer);
-
-      Object.values(splitInstances.current).forEach(split => {
+      Object.values(splitInstances.current).forEach((split) => {
         split?.revert?.();
       });
-
       splitInstances.current = {};
     };
   }, []);
 
-  // Dark mode sync
   useEffect(() => {
-    if (backButtonRef.current) {
-      backButtonRef.current.style.color = isDarkMode ? 'white' : 'black';
-    }
+    const color = isDarkMode ? 'white' : 'black';
 
+    Object.values(splitInstances.current).forEach((split) => {
+      if (!split?.chars) return;
+      split.chars.forEach((char) => {
+        char.style.color = color;
+      });
+    });
+
+    if (backButtonRef.current) {
+      backButtonRef.current.style.color = color;
+    }
     if (clickedTitleContainerRef.current) {
       const h1 = clickedTitleContainerRef.current.querySelector('h1');
-      if (h1) h1.style.color = isDarkMode ? 'white' : 'black';
+      if (h1) h1.style.color = color;
     }
   }, [isDarkMode]);
 
-  const beginRestoreFooterMenu = () => {
-    setTimeout(() => {
-      items.forEach(({ number: itemNumber }, index) => {
-        const titleSplit = splitInstances.current[`title-${itemNumber}`];
-        const numberSplit = splitInstances.current[`number-${itemNumber}`];
-        const titleEl = titleRefs.current[itemNumber];
-        const containerEl = titleEl?.parentElement;
+  const animateMenuOut = (tl) => {
+    items.forEach(({ number: itemNumber }, index) => {
+      const titleSplit = splitInstances.current[`title-${itemNumber}`];
+      const numberSplit = splitInstances.current[`number-${itemNumber}`];
+      const containerEl = titleRefs.current[itemNumber]?.parentElement;
+      if (!titleSplit || !numberSplit || !containerEl) return;
 
-        if (titleSplit && numberSplit && containerEl) {
-          gsap.set(containerEl, { display: 'flex' });
-
-          const allChars = [...titleSplit.chars, ...numberSplit.chars];
-          const reverseDelay = (items.length - 1 - index) * 0.3;
-
-          gsap.fromTo(
-            allChars,
-            { x: '100vw' },
-            {
-              x: 0,
-              opacity: 1,
-              duration: 1.5,
-              ease: 'power2.out',
-              stagger: {
-                amount: 0.8,
-                from: 'end',
-              },
-              delay: reverseDelay,
-            }
-          );
-        }
-      });
-
-      setTimeout(() => {
-        setClickedNumber(null);
-        if (onProjectClick) {
-          onProjectClick(null);
-        }
-      }, 2000);
-    }, 800);
+      const allChars = [...titleSplit.chars, ...numberSplit.chars];
+      tl.to(
+        allChars,
+        {
+          yPercent: ANIM.menuOut.yPercent,
+          duration: ANIM.menuOut.duration,
+          ease: ANIM.menuOut.ease,
+          stagger: ANIM.menuOut.staggerEach,
+          force3D: true,
+          onComplete: () => gsap.set(containerEl, { display: 'none' }),
+        },
+        index * ANIM.menuOut.rowCascade
+      );
+    });
   };
 
-  // Función para volver al menú inicial
-  const handleBack = () => {
-    if (window.__footerBackStarted) {
-      window.__footerBackStarted();
-    }
+  const restoreMenu = () => {
+    const tl = gsap.timeline({
+      onComplete: () => {
+        setClickedNumber(null);
+        if (onProjectClick) onProjectClick(null);
+      },
+    });
 
-    const backButtonSplit = splitInstances.current[`back-button`];
-    const clickedTitleSplit = splitInstances.current[`clicked-title`];
-    const hasCenterUi =
-      clickedTitleSplit && clickedTitleContainerRef.current;
+    items.forEach(({ number: itemNumber }, index) => {
+      const titleSplit = splitInstances.current[`title-${itemNumber}`];
+      const numberSplit = splitInstances.current[`number-${itemNumber}`];
+      const containerEl = titleRefs.current[itemNumber]?.parentElement;
+      if (!titleSplit || !numberSplit || !containerEl) return;
+
+      gsap.set(containerEl, { display: 'flex' });
+      const allChars = [...titleSplit.chars, ...numberSplit.chars];
+
+      tl.fromTo(
+        allChars,
+        { yPercent: ANIM.menuRestore.fromYPercent },
+        {
+          yPercent: 0,
+          duration: ANIM.menuRestore.duration,
+          ease: ANIM.menuRestore.ease,
+          stagger: ANIM.menuRestore.staggerEach,
+          force3D: true,
+        },
+        index * ANIM.menuRestore.rowCascade
+      );
+    });
+  };
+
+  const revealBackButton = () => {
+    const el = backButtonRef.current;
+    if (!el) return;
+
+    gsap.set(el, { display: 'block', opacity: 1 });
+
+    const backSplit = splitPlain(el);
+    splitInstances.current['back-button'] = backSplit;
+    if (!backSplit.chars || backSplit.chars.length === 0) return;
+
+    gsap.fromTo(
+      backSplit.chars,
+      { yPercent: ANIM.backIn.fromYPercent },
+      {
+        yPercent: 0,
+        duration: ANIM.backIn.duration,
+        ease: ANIM.backIn.ease,
+        stagger: ANIM.backIn.staggerEach,
+        force3D: true,
+      }
+    );
+  };
+
+  const handleBack = () => {
+    if (window.__footerBackStarted) window.__footerBackStarted();
+
+    const backSplit = splitInstances.current['back-button'];
+    const titleSplit = splitInstances.current['clicked-title'];
+
+    const hideCenterUi = () => {
+      if (clickedTitleContainerRef.current) {
+        gsap.set(clickedTitleContainerRef.current, { display: 'none' });
+        clickedTitleContainerRef.current.innerHTML = '';
+      }
+      backButtonRef.current = null;
+      if (titleSplit?.revert) titleSplit.revert();
+      if (backSplit?.revert) backSplit.revert();
+      delete splitInstances.current['clicked-title'];
+      delete splitInstances.current['back-button'];
+    };
 
     // About: no hay título ni "back home" en el centro; solo restaurar menú
-    if (!hasCenterUi) {
-      if (clickedTitleContainerRef.current) {
-        clickedTitleContainerRef.current.innerHTML = '';
-        gsap.set(clickedTitleContainerRef.current, { display: 'none' });
-      }
-      beginRestoreFooterMenu();
+    if (!titleSplit && !backSplit) {
+      hideCenterUi();
+      restoreMenu();
       return;
     }
 
-    if (backButtonSplit && backButtonRef.current) {
-      gsap.to(backButtonSplit.chars, {
-        x: '100vw',
-        duration: 0.8,
-        ease: 'power2.in',
-        stagger: {
-          amount: 0.4,
-          from: 'start',
+    const tl = gsap.timeline({
+      onComplete: () => {
+        hideCenterUi();
+        restoreMenu();
+      },
+    });
+
+    if (backSplit && backButtonRef.current) {
+      tl.to(
+        backSplit.chars,
+        {
+          yPercent: ANIM.backOut.yPercent,
+          duration: ANIM.backOut.duration,
+          ease: ANIM.backOut.ease,
+          stagger: ANIM.backOut.staggerEach,
+          force3D: true,
         },
-        onComplete: () => {
-          if (backButtonRef.current) {
-            gsap.set(backButtonRef.current, { display: 'none' });
-          }
-        },
-      });
+        0
+      );
     }
 
-    if (clickedTitleSplit && clickedTitleContainerRef.current) {
-      gsap.to(clickedTitleSplit.chars, {
-        x: '100vw',
-        duration: 0.8,
-        ease: 'power2.in',
-        stagger: {
-          amount: 0.4,
-          from: 'end',
+    if (titleSplit && clickedTitleContainerRef.current) {
+      tl.to(
+        titleSplit.chars,
+        {
+          yPercent: ANIM.backOut.yPercent,
+          duration: ANIM.backOut.duration,
+          ease: ANIM.backOut.ease,
+          stagger: ANIM.backOut.staggerEach,
+          force3D: true,
         },
-        onComplete: () => {
-          gsap.set(clickedTitleContainerRef.current, { display: 'none' });
-
-          if (clickedTitleSplit?.revert) {
-            clickedTitleSplit.revert();
-          }
-          delete splitInstances.current[`clicked-title`];
-
-          if (backButtonSplit?.revert) {
-            backButtonSplit.revert();
-          }
-          delete splitInstances.current[`back-button`];
-
-          beginRestoreFooterMenu();
-        },
-      });
+        0
+      );
     }
   };
 
-  const handleBackRef = useRef(null);
+  const handleBackRef = useRef(handleBack);
   handleBackRef.current = handleBack;
 
   useEffect(() => {
@@ -201,219 +300,72 @@ export default function FooterMobile({ onProjectClick }) {
     };
   }, []);
 
-  // Función para animar la salida de los elementos no seleccionados
   const handleClick = (number, id) => {
     if (clickedNumber || !id) return;
-    
+
     setClickedNumber(number);
-    
-    // Notificar al componente padre sobre el proyecto seleccionado
-    if (onProjectClick) {
-      onProjectClick(id);
+    if (onProjectClick) onProjectClick(id);
+
+    const clickedItem = items.find((item) => item.number === number);
+    const isAbout = id === 'about';
+    let newTitleSplit = null;
+
+    if (!isAbout && clickedItem && clickedTitleContainerRef.current) {
+      clickedTitleContainerRef.current.innerHTML = '';
+
+      const backButtonEl = document.createElement('div');
+      backButtonEl.className = 'absolute -top-6 left-0 cursor-pointer';
+      backButtonEl.style.color = isDarkMode ? 'white' : 'black';
+      backButtonEl.textContent = 'back home';
+      backButtonEl.style.display = 'none';
+      backButtonEl.addEventListener('click', () => handleBackRef.current?.());
+      clickedTitleContainerRef.current.appendChild(backButtonEl);
+      backButtonRef.current = backButtonEl;
+
+      const newTitleEl = document.createElement('h1');
+      newTitleEl.className = 'flex';
+      newTitleEl.style.color = isDarkMode ? 'white' : 'black';
+      newTitleEl.textContent = clickedItem.title;
+      clickedTitleContainerRef.current.appendChild(newTitleEl);
+
+      newTitleSplit = splitTitle(newTitleEl);
+      splitInstances.current['clicked-title'] = newTitleSplit;
+
+      gsap.set(newTitleSplit.chars, { yPercent: ANIM.titleIn.fromYPercent });
+      gsap.set(clickedTitleContainerRef.current, { display: 'block' });
     }
 
-    const clickedTitleSplit = splitInstances.current[`title-${number}`];
-    const clickedTitleEl = titleRefs.current[number];
-    const clickedItem = items.find(item => item.number === number);
+    const tl = gsap.timeline();
+    animateMenuOut(tl);
 
-    // Calcular el delay total necesario para que todos los títulos salgan
-    let totalDelay = 0;
-    const delayBetweenItems = 0.4; // Delay entre cada título
-
-    // Primero: animar TODOS los títulos hacia la derecha con delays progresivos
-    items.forEach(({ number: itemNumber }, index) => {
-      const titleSplit = splitInstances.current[`title-${itemNumber}`];
-      const numberSplit = splitInstances.current[`number-${itemNumber}`];
-      const titleEl = titleRefs.current[itemNumber];
-      const numberEl = numberRefs.current[itemNumber];
-      const containerEl = titleEl?.parentElement;
-
-      if (titleSplit && numberSplit && containerEl) {
-        // Delay progresivo para cada título
-        const itemDelay = index * delayBetweenItems;
-        
-        // Animar chars del título y caracteres del número hacia la derecha
-        const allChars = [...titleSplit.chars, ...numberSplit.chars];
-
-        gsap.to(allChars, {
-          x: '100vw',
-          duration: 2.5,
-          ease: 'power1.out',
-          stagger: {
-            amount: 1.2,
-            from: 'start',
-          },
-          delay: itemDelay,
-          onComplete: () => {
-            // Ocultar contenedores de items no clickeados
-            if (itemNumber !== number) {
-              gsap.set(containerEl, { display: 'none' });
-            } else {
-              // Para el título clickeado, ocultar el contenedor después de la animación
-              gsap.set(containerEl, { display: 'none' });
-            }
-          },
-        });
-
-        // Actualizar el delay total (incluyendo el título clickeado)
-        totalDelay = Math.max(totalDelay, itemDelay + 2.5 + 1.2);
-      }
-    });
-
-    if (id === 'about') {
-      setTimeout(() => {
+    if (isAbout) {
+      tl.eventCallback('onComplete', () => {
         window.__footerAnimationComplete?.();
-      }, totalDelay * 1000);
+      });
       return;
     }
 
-    // Segundo: después de que todos salgan, mostrar el título clickeado en el centro, pegado a la izquierda
-    if (clickedTitleSplit && clickedTitleEl && clickedItem) {
-      // Crear o mostrar el contenedor del título clickeado en el centro, pegado a la izquierda
-      if (clickedTitleContainerRef.current) {
-        // Limpiar el contenido anterior
-        clickedTitleContainerRef.current.innerHTML = '';
-        
-        // Crear contenedor para el botón back home
-        const backButtonContainer = document.createElement('div');
-        backButtonContainer.className = 'absolute -top-6 left-0 cursor-pointer';
-        backButtonContainer.style.color = isDarkMode ? 'white' : 'black';
-        backButtonContainer.textContent = 'back home';
-        backButtonContainer.style.display = 'none';
-        backButtonContainer.style.opacity = '0';
-        backButtonContainer.addEventListener('click', handleBack);
-        clickedTitleContainerRef.current.appendChild(backButtonContainer);
-        
-        // Actualizar la referencia del botón
-        backButtonRef.current = backButtonContainer;
-        
-        // Crear un nuevo elemento para el título clickeado
-        const newTitleEl = document.createElement('h1');
-        newTitleEl.className = 'flex';
-        newTitleEl.style.color = isDarkMode ? 'white' : 'black';
-        newTitleEl.textContent = clickedItem.title;
-        clickedTitleContainerRef.current.appendChild(newTitleEl);
+    if (!newTitleSplit) return;
 
-        // Inicializar SplitText para el nuevo título
-        const newTitleSplit = new SplitText(newTitleEl, {
-          opacity: 1,
-          type: 'words,chars',
-          wordsClass: 'word',
-          charsClass: 'char'
-        });
-
-        // Añadir espacios entre palabras
-        const words = newTitleEl.querySelectorAll('.word');
-        words.forEach((word, index) => {
-          if (index < words.length - 1) {
-            word.style.marginRight = '0.45em';
-          }
-        });
-
-        // Posicionar el título fuera de pantalla inicialmente
-        gsap.set(newTitleSplit.chars, { 
-          x: '100vw',
-          opacity: 1,
-        });
-
-        // Mostrar el contenedor
-        gsap.set(clickedTitleContainerRef.current, { display: 'block' });
-
-        // Calcular el delay reducido
-        const clickedIndex = items.findIndex(item => item.number === number);
-        const clickedItemDelay = clickedIndex * delayBetweenItems;
-        const reducedDelay = clickedItemDelay + 2.0;
-
-        // Función para stagger progresivo
-        const getStaggerDelay = (index, total) => {
-          const progress = index / total;
-          const easedProgress = progress * progress;
-          return easedProgress * 0.6;
-        };
-
-        // Animar entrada del título clickeado desde la derecha con easing progresivo
-        const chars = newTitleSplit.chars;
-        chars.forEach((char, index) => {
-          gsap.to(char, {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: 'power1.inOut',
-            delay: reducedDelay + getStaggerDelay(index, chars.length),
-            onComplete: () => {
-              // ⭐ CUANDO TERMINA LA ÚLTIMA LETRA, NOTIFICAR QUE LA ANIMACIÓN COMPLETÓ
-              if (index === chars.length - 1) {
-                // Notificar al padre que la animación del título terminó
-                setTimeout(() => {
-                  if (window.__footerAnimationComplete) {
-                    window.__footerAnimationComplete();
-                  }
-                }, 200);
-                
-                // Mostrar el botón de back cuando termine la última letra del título
-                if (backButtonRef.current) {
-                  setTimeout(() => {
-                    if (!backButtonRef.current) return;
-                    
-                    gsap.set(backButtonRef.current, { 
-                      display: 'block',
-                      opacity: 1 
-                    });
-                    
-                    // Inicializar SplitText para el botón back home
-                    const backButtonSplit = new SplitText(backButtonRef.current, {
-                      type: 'chars',
-                      charsClass: 'char'
-                    });
-                    
-                    splitInstances.current[`back-button`] = backButtonSplit;
-                    
-                    if (!backButtonSplit.chars || backButtonSplit.chars.length === 0) {
-                      console.warn('No se pudieron crear chars para back home');
-                      return;
-                    }
-                    
-                    // Posicionar los chars fuera de pantalla inicialmente
-                    gsap.set(backButtonSplit.chars, {
-                      x: '100vw',
-                    });
-                    
-                    // Función para stagger progresivo del botón
-                    const getBackStaggerDelay = (charIndex, total) => {
-                      const progress = charIndex / total;
-                      const easedProgress = progress * progress;
-                      return easedProgress * 0.5;
-                    };
-                    
-                    // Animar entrada del botón letra por letra desde la derecha
-                    const backChars = backButtonSplit.chars;
-                    
-                    backChars.forEach((char, charIndex) => {
-                      gsap.to(char, {
-                        x: 0,
-                        opacity: 1,
-                        duration: 0.8,
-                        ease: 'power1.inOut',
-                        delay: getBackStaggerDelay(charIndex, backChars.length),
-                      });
-                    });
-                  }, 50);
-                }
-              }
-            }
-          });
-        });
-
-        // Guardar la instancia para poder revertirla después
-        splitInstances.current[`clicked-title`] = newTitleSplit;
-      }
-    }
+    tl.to(
+      newTitleSplit.chars,
+      {
+        yPercent: 0,
+        duration: ANIM.titleIn.duration,
+        ease: ANIM.titleIn.ease,
+        stagger: ANIM.titleIn.staggerEach,
+        force3D: true,
+        onComplete: () => {
+          window.__footerAnimationComplete?.();
+          revealBackButton();
+        },
+      },
+      ANIM.titleIn.at
+    );
   };
 
-  // ⬇️ JSX
   return (
     <>
-      {/* Contenedor para el título clickeado (centro de la interfaz, pegado a la izquierda) */}
       <div
         ref={clickedTitleContainerRef}
         className="absolute top-1/2 left-4 -translate-y-1/2 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] whitespace-nowrap"
@@ -432,7 +384,7 @@ export default function FooterMobile({ onProjectClick }) {
               onClick={() => handleClick(number, id || number)}
             >
               <h1
-                ref={el => (titleRefs.current[number] = el)}
+                ref={(el) => (titleRefs.current[number] = el)}
                 className="flex text-left"
                 style={{ color: isDarkMode ? 'white' : 'black' }}
               >
@@ -440,7 +392,7 @@ export default function FooterMobile({ onProjectClick }) {
               </h1>
 
               <p
-                ref={el => (numberRefs.current[number] = el)}
+                ref={(el) => (numberRefs.current[number] = el)}
                 className="flex justify-end w-[2ch] tabular-nums"
                 style={{ color: isDarkMode ? 'white' : 'black' }}
               >

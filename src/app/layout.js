@@ -2,7 +2,7 @@ import "./globals.css";
 import localFont from "next/font/local";
 import { DarkModeProvider } from "@/contexts/DarkModeContext";
 
-const PPNeueYorkNarrowMedium = localFont({
+const PPNeueMontreal = localFont({
   src: '../fonts/PPNeueMontreal-Medium.woff',
   display: 'swap',
 });
@@ -20,9 +20,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={PPNeueYorkNarrowMedium.className}>
+    <html lang="en" className={PPNeueMontreal.className}>
       <body
-        className={`${PPNeueYorkNarrowMedium.className} antialiased`}
+        className={`${PPNeueMontreal.className} antialiased`}
       >
         <DarkModeProvider>
           {children}
