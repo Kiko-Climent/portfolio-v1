@@ -25,6 +25,11 @@ export default function Home() {
   const [showSlider, setShowSlider] = useState(false);
   const [hideSlider, setHideSlider] = useState(false); // ⭐ NUEVO ESTADO
   const [viewportHeight, setViewportHeight] = useState(null);
+  // Se activa en el mismo instante que window.__footerBackStarted (antes de
+  // que clickedProject llegue a null, que tarda lo que dure restoreMenu en
+  // FooterMobile.js) para que el contacto del navbar salga a la vez que
+  // saldría el título de un proyecto, no ~1s más tarde.
+  const [aboutExiting, setAboutExiting] = useState(false);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -91,12 +96,13 @@ export default function Home() {
     };
   }, [isMobile]);
 
-  
+
 
   useEffect(() => {
     if (clickedProject === null) {
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR
+      setAboutExiting(false);
     }
   }, [clickedProject]);
 
@@ -110,6 +116,7 @@ export default function Home() {
     // ⭐ CALLBACK PARA CUANDO EMPIEZA EL BACK (ocultar slider)
     window.__footerBackStarted = () => {
       setHideSlider(true);
+      setAboutExiting(true);
     };
 
     return () => {
@@ -121,6 +128,7 @@ export default function Home() {
   const selectedProject = clickedProject ? projects[clickedProject] : null;
   const hoveredProject = footerHoveredProject && !clickedProject ? projects[footerHoveredProject] : null;
   const shouldShowMobileBackground = isMobile && isMobileReady && clickedProject === null;
+  const isAboutSelected = selectedProject?.id === 'about' && !aboutExiting;
 
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
@@ -134,7 +142,7 @@ export default function Home() {
 
     setActiveProject(null);
     setFooterHoveredProject(null);
-    
+
     setTimeout(() => {
       setClickedProject(projectId);
     }, 600);
@@ -153,7 +161,7 @@ export default function Home() {
     setActiveProject(projectId);
   };
 
-  
+
   return (
     <div
       className="relative overflow-hidden"
@@ -162,60 +170,60 @@ export default function Home() {
         height: isMobile && viewportHeight ? `${viewportHeight}px` : '100dvh',
         ...(isMobile ? {} : { minHeight: '100vh' }),
       }}
-      
+
     >
       {isMobile ? (
-        <NavbarLoaderMobNew onReady={() => setIsMobileReady(true)} />
+        <NavbarLoaderMobNew onReady={() => setIsMobileReady(true)} showContact={isAboutSelected} />
       ) : (
         <NavbarLoaderNew5 onLoadingComplete={handleLoadingComplete} />
       )}
-      
+
       {shouldShowMobileBackground ? (
         <BackgroundMobile />
       ) : !isMobile ? (
-        <div 
-          style={{ 
+        <div
+          style={{
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
           }}
         >
-          <PortfolioGridThree 
-            activeProject={activeProject} 
+          <PortfolioGridThree
+            activeProject={activeProject}
             clickedProject={clickedProject}
             isVisible={isLoadingComplete}
             onHover={handleGridHover}
           />
         </div>
       ) : null}
-      
+
       {/* ⭐ PASAR hideSlider AL SLIDER */}
       {selectedProject && isLoadingComplete && showSlider && (
         <>
           {isMobile ? (
             !hideSlider && <ProjectImageSliderMobile project={selectedProject} />
           ) : (
-            <ProjectImageSliderThree 
-              project={selectedProject} 
-              shouldHide={hideSlider} 
+            <ProjectImageSliderThree
+              project={selectedProject}
+              shouldHide={hideSlider}
             />
           )}
         </>
       )}
-      
+
       {!isMobile && hoveredProject && isLoadingComplete && (
         <>
           <HoverImageSlider project={hoveredProject} />
         </>
       )}
-      
+
       {isMobile && isMobileReady ? (
         <FooterMobile onProjectClick={handleProjectClick} />
       ) : !isMobile ? (
-        <div 
-          style={{ 
+        <div
+          style={{
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
           }}
         >
-          <Footer3 
+          <Footer3
             activeProject={activeProject}
             onHover={handleFooterHover}
             onProjectClick={handleProjectClick}

@@ -2,7 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { SplitText } from 'gsap/SplitText';
 import { useDarkMode } from '@/contexts/DarkModeContext';
+
+gsap.registerPlugin(SplitText);
 
 // Mismo efecto "roll" que la versión de escritorio (johnnycarretes.com):
 // cada carácter tiene una fila apilada por etapa (color === null -> oculto;
@@ -20,10 +23,20 @@ const ROLL = {
   outStagger: 0.018,
 };
 
+// Contacto: entra/sale con la MISMA animación de máscara por caracteres que
+// el título del proyecto al abrir su detalle (FooterMobile.js -> ANIM.titleIn
+// / ANIM.backOut) — yPercent 140 -> 0 al entrar, power4.out con stagger por
+// carácter; al salir, yPercent 0 -> -140 con power3.in.
+const CONTACT_ANIM = {
+  in: { duration: 0.9, ease: 'power4.out', staggerEach: 0.03, fromYPercent: 140 },
+  out: { duration: 0.45, ease: 'power3.in', staggerEach: 0.018, yPercent: -140 },
+};
+const MASK_CUSHION = '0.25em';
+
 const renderRollStages = (text, charsRef, stages) => {
   charsRef.current = [];
   return text.split('').map((ch, i) => {
-    const glyph = ch === ' ' ? ' ' : ch;
+    const glyph = ch === ' ' ? ' ' : ch;
     return (
       <span
         key={i}
@@ -57,7 +70,13 @@ const renderRollStages = (text, charsRef, stages) => {
 const CLIMENT_START_INDEX = 5;
 const CLIMENT_END_INDEX = 11;
 
-const NavbarLoaderMobNew = ({ onReady }) => {
+const CONTACT_EMAIL = 'climent.kiko@gmail.com';
+
+// showContact: true cuando la sección activa en móvil es "About" — la única
+// vez que este email debe aparecer (en desktop ya vive siempre en la 2ª
+// columna del navbar; aquí solo tiene sentido dentro de About, si no,
+// quedaría redundante con el navbar fijo).
+const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showLoader, setShowLoader] = useState(true);
   const [showNavbarContent, setShowNavbarContent] = useState(false);
@@ -75,6 +94,11 @@ const NavbarLoaderMobNew = ({ onReady }) => {
   const row2Ref = useRef(null);
   const row2SpacerRef = useRef(null);
   const navbarRef = useRef(null);
+  const contactRef = useRef(null); // fila "contact climent.kiko@gmail.com" en el navbar final
+  const contactLabelRef = useRef(null); // "contact"
+  const contactEmailRef = useRef(null); // "climent.kiko@gmail.com"
+  const contactSplitRef = useRef(null);
+  const prevShowContactRef = useRef(false);
 
   // Editorial brutalista: un único acento activo (negro/blanco) a la vez,
   // el resto en gris — el color depende del modo claro/oscuro.
@@ -360,6 +384,96 @@ const NavbarLoaderMobNew = ({ onReady }) => {
     };
   }, [onReady, isDarkMode]);
 
+  // Máscara para que la animación por caracteres no recorte ascendentes ni
+  // descendentes (misma técnica que FooterMobile.js -> cushionMask).
+  const cushionMaskChars = (chars) => {
+    chars.forEach((char) => {
+      const wrap = char.parentElement;
+      if (!wrap) return;
+      wrap.style.paddingTop = MASK_CUSHION;
+      wrap.style.paddingBottom = MASK_CUSHION;
+      wrap.style.marginTop = `-${MASK_CUSHION}`;
+      wrap.style.marginBottom = `-${MASK_CUSHION}`;
+    });
+  };
+
+  // Entrada/salida del email de contacto — solo visible en la sección About
+  // (showContact llega del padre). Misma animación de máscara por caracteres
+  // que el título del proyecto al entrar en su detalle: "contact" en negro/
+  // blanco (como el resto del navbar) y el email en el mismo gris apagado
+  // que la descripción de About, pero ambos ruedan juntos como una sola línea.
+  useEffect(() => {
+    if (!showNavbarContent) return;
+    if (showContact === prevShowContactRef.current) return;
+    prevShowContactRef.current = showContact;
+
+    const labelEl = contactLabelRef.current;
+    const emailEl = contactEmailRef.current;
+    const rowEl = contactRef.current;
+    if (!labelEl || !emailEl || !rowEl) return;
+
+    if (showContact) {
+      gsap.set(rowEl, { display: 'block' });
+      const labelSplit = new SplitText(labelEl, { type: 'chars', mask: 'chars', charsClass: 'char' });
+      const emailSplit = new SplitText(emailEl, { type: 'chars', mask: 'chars', charsClass: 'char' });
+      contactSplitRef.current = { label: labelSplit, email: emailSplit };
+
+      labelSplit.chars.forEach((char) => {
+        char.style.color = isDarkMode ? '#ffffff' : '#000000';
+      });
+      emailSplit.chars.forEach((char) => {
+        char.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
+      });
+      const allChars = [...labelSplit.chars, ...emailSplit.chars];
+      cushionMaskChars(allChars);
+
+      gsap.fromTo(
+        allChars,
+        { yPercent: CONTACT_ANIM.in.fromYPercent },
+        {
+          yPercent: 0,
+          duration: CONTACT_ANIM.in.duration,
+          ease: CONTACT_ANIM.in.ease,
+          stagger: CONTACT_ANIM.in.staggerEach,
+          force3D: true,
+        }
+      );
+    } else {
+      const split = contactSplitRef.current;
+      if (!split) {
+        gsap.set(rowEl, { display: 'none' });
+        return;
+      }
+      const allChars = [...split.label.chars, ...split.email.chars];
+      gsap.to(allChars, {
+        yPercent: CONTACT_ANIM.out.yPercent,
+        duration: CONTACT_ANIM.out.duration,
+        ease: CONTACT_ANIM.out.ease,
+        stagger: CONTACT_ANIM.out.staggerEach,
+        force3D: true,
+        onComplete: () => {
+          gsap.set(rowEl, { display: 'none' });
+          split.label.revert();
+          split.email.revert();
+          contactSplitRef.current = null;
+        },
+      });
+    }
+  }, [showContact, showNavbarContent, isDarkMode]);
+
+  // Si cambia el modo claro/oscuro mientras el contacto ya está visible,
+  // recolorea sus caracteres sin relanzar la animación de entrada.
+  useEffect(() => {
+    const split = contactSplitRef.current;
+    if (!split) return;
+    split.label.chars?.forEach((char) => {
+      char.style.color = isDarkMode ? '#ffffff' : '#000000';
+    });
+    split.email.chars?.forEach((char) => {
+      char.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
+    });
+  }, [isDarkMode]);
+
   return (
     <div
       className={`${isDarkMode ? 'text-white' : 'text-black'} transition-colors duration-300`}
@@ -441,7 +555,7 @@ const NavbarLoaderMobNew = ({ onReady }) => {
         style={{ transform: 'translate(-50%, -50%)' }}
       />
 
-      {/* Navbar: layout final idéntico a NavbarMobile.js */}
+      {/* Navbar: layout final idéntico a NavbarMobile.js + 4ª línea de contacto (solo About) */}
       <div
         ref={navbarRef}
         className="flex top-4 left-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] absolute transition-opacity duration-500"
@@ -451,6 +565,19 @@ const NavbarLoaderMobNew = ({ onReady }) => {
           <h1 className="py-1.5">Kiko Climent</h1>
           <h2 className="py-1.5">Portfolio 2026</h2>
           <h2 className="py-1.5">Creative Frontend Developer</h2>
+          <div ref={contactRef} className="py-1.5" style={{ display: 'none' }}>
+            <span ref={contactLabelRef} style={{ color: isDarkMode ? 'white' : 'black' }}>
+              contact
+            </span>{' '}
+            <a
+              ref={contactEmailRef}
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="lowercase hover:opacity-80 transition-opacity"
+              style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+            >
+              {CONTACT_EMAIL}
+            </a>
+          </div>
         </div>
       </div>
     </div>
