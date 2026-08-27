@@ -125,6 +125,10 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
       square2Ref.current.style.top = `${square2Target.y}px`;
       square2Ref.current.style.left = '-100px';
       square2Ref.current.style.transform = 'translate(-50%, -50%)';
+      // Ya está fuera de pantalla (left: -100px) antes de este punto, así
+      // que es seguro devolverle su opacidad — el JSX lo arranca en 0 solo
+      // para cubrir el instante entre el primer pintado y este useEffect.
+      gsap.set(square2Ref.current, { opacity: 1 });
     }
 
     // Rotación continua de un cuadrado (misma lógica que NavbarLoader.js)
@@ -376,7 +380,12 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
         </div>
       )}
 
-      {/* Cuadrado principal: visible desde el inicio, termina como toggle en el navbar */}
+      {/* Cuadrado principal: visible desde el inicio, termina como toggle en el navbar.
+          opacity: 0 desde el primer render — hasta que el useEffect mide y ancla su
+          posición (anchorTo), este div "fixed" no tiene top/left propios, así que el
+          navegador lo coloca en su posición estática por defecto (esquina superior
+          izquierda) durante el primer pintado. Sin este opacity inicial se ve ese
+          flash antes de que el cuadrado salte a su sitio real. */}
       <div
         ref={squareRef}
         onClick={!showLoader ? toggleDarkMode : undefined}
@@ -384,6 +393,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
         onMouseLeave={() => !showLoader && setIsHovered(false)}
         className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60]`}
         style={{
+          opacity: 0,
           transform: `translate(-50%, -50%) rotate(${isHovered ? '180deg' : '0deg'})`,
           cursor: !showLoader ? 'pointer' : 'default',
           backgroundColor: isHovered
@@ -394,11 +404,13 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
         aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
       />
 
-      {/* Segundo cuadrado: entra deslizándose desde fuera de pantalla, viaja junto al principal y se desvanece al llegar */}
+      {/* Segundo cuadrado: entra deslizándose desde fuera de pantalla, viaja junto al principal y se desvanece al llegar.
+          Mismo motivo que el cuadrado principal: opacity 0 desde el primer render para evitar el flash en la esquina
+          antes de que el useEffect le fije top/left. */}
       <div
         ref={square2Ref}
         className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60] pointer-events-none`}
-        style={{ transform: 'translate(-50%, -50%)' }}
+        style={{ opacity: 0, transform: 'translate(-50%, -50%)' }}
       />
 
       {/* Navbar */}

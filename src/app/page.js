@@ -20,6 +20,15 @@ export default function Home() {
   const [footerHoveredProject, setFooterHoveredProject] = useState(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  // El SSR no conoce el ancho real de la pantalla, así que "isMobile" arranca
+  // en false SIEMPRE — hasta que este flag pasa a true (justo después de
+  // checkMobile, en el mismo tick), NO se pinta ningún navbar. Sin esto, todo
+  // visitante — móvil incluido — recibe primero el HTML del navbar de
+  // ESCRITORIO (con sus propias medidas/cuadrados calculados para un ancho
+  // que no es el suyo) durante uno o dos frames, hasta que React lo desmonta
+  // y monta el navbar correcto: eso es lo que se veía como "el cuadrado salta
+  // de la esquina al centro" tanto en móvil como en desktop.
+  const [hasMounted, setHasMounted] = useState(false);
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
   const [isMobileReady, setIsMobileReady] = useState(false);
   const [showSlider, setShowSlider] = useState(false);
@@ -61,6 +70,7 @@ export default function Home() {
     };
 
     checkMobile();
+    setHasMounted(true);
     window.addEventListener('resize', checkMobile);
 
     return () => window.removeEventListener('resize', checkMobile);
@@ -172,11 +182,13 @@ export default function Home() {
       }}
 
     >
-      {isMobile ? (
-        <NavbarLoaderMobNew onReady={() => setIsMobileReady(true)} showContact={isAboutSelected} />
-      ) : (
-        <NavbarLoaderNew5 onLoadingComplete={handleLoadingComplete} />
-      )}
+      {hasMounted ? (
+        isMobile ? (
+          <NavbarLoaderMobNew onReady={() => setIsMobileReady(true)} showContact={isAboutSelected} />
+        ) : (
+          <NavbarLoaderNew5 onLoadingComplete={handleLoadingComplete} />
+        )
+      ) : null}
 
       {shouldShowMobileBackground ? (
         <BackgroundMobile />
