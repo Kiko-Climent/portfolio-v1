@@ -36,7 +36,13 @@ const MASK_CUSHION = '0.25em';
 const renderRollStages = (text, charsRef, stages) => {
   charsRef.current = [];
   return text.split('').map((ch, i) => {
-    const glyph = ch === ' ' ? ' ' : ch;
+    // Un espacio " " como ÚNICO contenido de un inline-block colapsa a
+    // ancho 0 (la máscara crea su propio "line box" interno, y ese espacio
+    // queda a la vez al principio y al final de esa línea, así que el
+    // motor de render lo recorta). Un NBSP no es un espacio "colapsable",
+    // así que conserva su ancho — de ahí "KikoCliment" sin hueco entre
+    // palabras.
+    const glyph = ch === ' ' ? ' ' : ch;
     return (
       <span
         key={i}
@@ -178,6 +184,10 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
     }
     square2Ref.current.style.left = '-100px';
     square2Ref.current.style.transform = 'translate(-50%, -50%)';
+    // Ya está fuera de pantalla (left: -100px) antes de este punto, así que
+    // es seguro devolverle su opacidad — el JSX lo arranca en 0 solo para
+    // cubrir el instante entre el primer pintado y este useEffect.
+    gsap.set(square2Ref.current, { opacity: 1 });
 
     // Rotación continua de un cuadrado (misma lógica que NavbarLoader.js)
     const animateRotation = (element, duration) => {
@@ -538,6 +548,13 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
         onMouseLeave={() => !showLoader && setIsHovered(false)}
         className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60] font-bold`}
         style={{
+          // opacity: 0 desde el primer render — hasta que el useEffect mide
+          // y ancla su posición (anchorTo), este div "fixed" no tiene
+          // top/left propios, así que el navegador lo coloca en su posición
+          // estática por defecto (esquina superior izquierda) durante el
+          // primer pintado. Sin este opacity inicial se ve ese flash antes
+          // de que el cuadrado salte a su sitio real.
+          opacity: 0,
           transform: `translate(-50%, -50%) rotate(${isHovered ? '180deg' : '0deg'})`,
           cursor: !showLoader ? 'pointer' : 'default',
           backgroundColor: isHovered
@@ -548,11 +565,13 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
         aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
       />
 
-      {/* Segundo cuadrado: entra deslizándose desde fuera de pantalla, viaja junto al principal y se desvanece al llegar */}
+      {/* Segundo cuadrado: entra deslizándose desde fuera de pantalla, viaja junto al principal y se desvanece al llegar.
+          Mismo motivo que el cuadrado principal: opacity 0 desde el primer render para evitar el flash en la esquina
+          antes de que el useEffect le fije top/left. */}
       <div
         ref={square2Ref}
         className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60] pointer-events-none`}
-        style={{ transform: 'translate(-50%, -50%)' }}
+        style={{ opacity: 0, transform: 'translate(-50%, -50%)' }}
       />
 
       {/* Navbar: layout final idéntico a NavbarMobile.js + 4ª línea de contacto (solo About) */}
