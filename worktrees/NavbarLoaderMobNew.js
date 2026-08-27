@@ -219,8 +219,12 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
 
     // Ambos cuadrados viajan juntos hasta la esquina superior derecha del
     // navbar móvil — mismo tamaño y posición que en NavbarMobile.js. El
-    // segundo se desvanece justo al llegar y solo queda el primero, como
-    // toggle final.
+    // segundo va relleno (ver JSX) — al llegar y solaparse con el primero,
+    // la unión se ve como un único cuadrado negro, insinuando que ese es el
+    // "botón" de modo oscuro. Se queda así hasta que aparece el navbar
+    // final: en ese instante se vacía de color (misma transición que el
+    // hover del toggle) y justo después se desvanece, dejando al primer
+    // cuadrado — ahora sí, el toggle real — en su estado normal.
     const moveSquaresToNavbar = () => {
       setIsTransitioning(true);
 
@@ -246,21 +250,28 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
         }
       }, 900);
 
-      // El segundo cuadrado se desvanece justo al llegar a la esquina.
+      setTimeout(() => {
+        setShowLoader(false);
+        setShowNavbarContent(true);
+        // Se vacía de color justo cuando aparece el navbar — misma curva que
+        // el fill al pasar el ratón por encima del toggle antes de esto.
+        if (square2Ref.current) {
+          square2Ref.current.style.transition = 'background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+          square2Ref.current.style.backgroundColor = 'transparent';
+        }
+        if (onReady) {
+          onReady();
+        }
+      }, 2000);
+
+      // Una vez ya se vació de color (300ms), el segundo cuadrado desaparece
+      // del todo — solo queda el primero como toggle real.
       setTimeout(() => {
         if (square2Ref.current) {
           square2Ref.current.style.transition = 'opacity 0.3s ease-out';
           square2Ref.current.style.opacity = '0';
         }
-      }, 1700);
-
-      setTimeout(() => {
-        setShowLoader(false);
-        setShowNavbarContent(true);
-        if (onReady) {
-          onReady();
-        }
-      }, 2000);
+      }, 2350);
     };
 
     const tl = gsap.timeline();
@@ -392,7 +403,16 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
       if (rotationAnim) rotationAnim.stop();
       if (rotationAnim2) rotationAnim2.stop();
     };
-  }, [onReady, isDarkMode]);
+    // Ojo: NO añadir isDarkMode aquí. Este efecto no lo usa en ningún punto
+    // de su cuerpo (los colores de titleStages/subtitleStages ya se
+    // recalculan en cada render normal), pero si se incluye como
+    // dependencia, cada vez que se pulsa el cuadrado para cambiar de modo
+    // claro/oscuro (ya con el navbar terminado) este efecto se relanza
+    // entero — reconstruyendo y disparando otra vez la timeline completa,
+    // incluido el segundo cuadrado viajando desde fuera de pantalla hasta
+    // la esquina, por encima del navbar ya en su sitio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onReady]);
 
   // Máscara para que la animación por caracteres no recorte ascendentes ni
   // descendentes (misma técnica que FooterMobile.js -> cushionMask).
@@ -565,13 +585,14 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false }) => {
         aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
       />
 
-      {/* Segundo cuadrado: entra deslizándose desde fuera de pantalla, viaja junto al principal y se desvanece al llegar.
-          Mismo motivo que el cuadrado principal: opacity 0 desde el primer render para evitar el flash en la esquina
-          antes de que el useEffect le fije top/left. */}
+      {/* Segundo cuadrado: entra deslizándose desde fuera de pantalla ya relleno (conceptualmente es el
+          toggle "en negro"), viaja junto al principal y al llegar la unión de ambos se ve como un único
+          cuadrado negro. opacity 0 desde el primer render por el mismo motivo que el cuadrado principal:
+          evitar el flash en la esquina antes de que el useEffect le fije top/left. */}
       <div
         ref={square2Ref}
-        className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60] pointer-events-none`}
-        style={{ opacity: 0, transform: 'translate(-50%, -50%)' }}
+        className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} z-[60] pointer-events-none`}
+        style={{ opacity: 0, backgroundColor: isDarkMode ? 'white' : 'black', transform: 'translate(-50%, -50%)' }}
       />
 
       {/* Navbar: layout final idéntico a NavbarMobile.js + 4ª línea de contacto (solo About) */}
