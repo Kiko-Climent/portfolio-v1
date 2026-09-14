@@ -2,8 +2,53 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { getOptimizedImageUrl } from '@/lib/optimizedImage';
 
-export default function SliderThree3Mobile({ images, project, navbarHeight }) {
+const getPerfProfile = (variant, imageCount) => {
+    const mash = variant === 'mash' || imageCount > 18;
+
+    return {
+        mash,
+        segmentsX: mash ? 20 : 28,
+        segmentsY: mash ? 10 : 16,
+        textureWidth: mash ? 640 : 1080,
+        textureMaxSize: mash ? 640 : 1080,
+        quality: mash ? 50 : 75,
+        pixelRatio: mash ? 1.25 : 1.5,
+        antialias: false,
+        loopCopies: mash ? 1 : 2,
+        viewRange: mash ? 5.2 : 6.5,
+        loadRange: mash ? 8 : 12,
+    };
+};
+
+const downsampleTexture = (texture, maxSize) => {
+    const image = texture.image;
+    if (!image || !image.width || !image.height) return texture;
+
+    const largest = Math.max(image.width, image.height);
+    if (largest <= maxSize) return texture;
+
+    const scale = maxSize / largest;
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.drawImage(image, 0, 0, width, height);
+    texture.image = canvas;
+    texture.needsUpdate = true;
+    return texture;
+};
+
+const resolveImagePath = (img, project) => {
+    if (img.src) return img.src;
+    if (project.id === 'about' && img.id === 1) return `${project.imagesPath}/about.png`;
+    return `${project.imagesPath}/${project.id}${img.id}.png`;
+};
+
+export default function SliderThree3Mobile({ images, project, navbarHeight, variant = 'detail' }) {
     const containerRef = useRef(null);
     const rendererRef = useRef(null);
     const cleanupRef = useRef(null);
@@ -11,45 +56,42 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
     useEffect(() => {
         if (!containerRef.current || !images.length) return;
 
-        // Esperar a que el contenedor tenga dimensiones
         const initThree = () => {
             if (!containerRef.current) return;
 
             const width = containerRef.current.clientWidth;
             const height = containerRef.current.clientHeight;
 
-            // Si no tiene dimensiones, reintentar después de un pequeño delay
             if (width === 0 || height === 0) {
                 setTimeout(initThree, 50);
                 return;
             }
 
+            const perf = getPerfProfile(variant, images.length);
             let animationId = null;
             const slides = [];
+            const textureCache = new Map();
+            const textureWaiters = new Map();
+            const loader = new THREE.TextureLoader();
 
-            // Renderer
             const renderer = new THREE.WebGLRenderer({
                 alpha: true,
-                antialias: true,
-                preserveDrawingBuffer: true,
+                antialias: perf.antialias,
+                preserveDrawingBuffer: false,
+                powerPreference: 'high-performance',
+                stencil: false,
+                depth: true,
             });
 
             renderer.setSize(width, height);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, perf.pixelRatio));
             containerRef.current.appendChild(renderer.domElement);
             rendererRef.current = renderer;
 
-            // Scene & Camera
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(
-                45,
-                width / height,
-                0.1,
-                100
-            );
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
             camera.position.z = 7;
 
-            // Settings
             const settings = {
                 wheelSensitivity: 0.01,
                 touchSensitivity: 0.01,
@@ -73,15 +115,15 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
                 tiltLerp: 0.12,
             };
 
-            // Slide dimensions (móvil)
             const slideWidth = 2.5;
             const slideHeight = 2.0;
             const gap = 0.15;
-            const slideCount = images.length * 2; // Duplicamos para loop infinito
+            const slideCount = images.length * perf.loopCopies;
             const totalHeight = slideCount * (slideHeight + gap);
             const slideUnit = slideHeight + gap;
+            const slideHalfHeight = slideHeight / 2;
+            const slideHalfWidth = slideWidth / 2;
 
-            // Scroll state
             let currentPosition = 0;
             let targetPosition = 0;
             let isScrolling = false;
@@ -89,8 +131,8 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
             let lastTime = 0;
             let touchStartY = 0;
             let touchLastY = 0;
+            let isTabHidden = false;
 
-            // Distortion state
             let currentDistortionFactor = 0;
             let targetDistortionFactor = 0;
             let currentLagFactor = 0;
@@ -98,15 +140,119 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
             let velocityHistory = [0, 0, 0, 0, 0];
             let currentFoldDirection = 1;
 
-            // Color correction
-            const correctImageColor = (texture) => {
-                texture.colorSpace = THREE.SRGBColorSpace;
-                return texture;
+            const smoothstep = (t) => t * t * (3 - 2 * t);
+
+            const precomputeCurve = (geometry) => {
+                const count = geometry.attributes.position.count;
+                const curve = {
+                    x: new Float32Array(count),
+                    y: new Float32Array(count),
+                    ny: new Float32Array(count),
+                    leftAmount: new Float32Array(count),
+                    topLeft: new Float32Array(count),
+                    liftShape: new Float32Array(count),
+                    curlShape: new Float32Array(count),
+                    fromGrab: new Float32Array(count),
+                    foldShape: new Float32Array(count),
+                    tiltBias: new Float32Array(count),
+                };
+
+                for (let i = 0; i < count; i++) {
+                    const x = geometry.attributes.position.getX(i);
+                    const y = geometry.attributes.position.getY(i);
+                    const nx = THREE.MathUtils.clamp(x / slideHalfWidth, -1, 1);
+                    const ny = THREE.MathUtils.clamp(y / slideHalfHeight, -1, 1);
+                    const leftAmount = (1 - nx) * 0.5;
+                    const topAmount = (1 + ny) * 0.5;
+                    const topLeft = Math.pow(leftAmount, 1.55) * Math.pow(topAmount, 0.9);
+                    const topRight =
+                        Math.pow(1 - leftAmount, 1.45) *
+                        Math.pow(topAmount, 1.15) *
+                        settings.rightCornerRatio;
+                    const cornerLift = Math.min(1, topLeft + topRight);
+                    const radial = (nx * nx * (0.35 + 0.65 * leftAmount) + ny * ny) * 0.5;
+
+                    curve.x[i] = x;
+                    curve.y[i] = y;
+                    curve.ny[i] = ny;
+                    curve.leftAmount[i] = leftAmount;
+                    curve.topLeft[i] = topLeft;
+                    curve.liftShape[i] = Math.pow(cornerLift, 1.25);
+                    curve.curlShape[i] = Math.pow(topLeft, 2.35);
+                    curve.fromGrab[i] = THREE.MathUtils.clamp(
+                        Math.hypot(nx + 1, ny - 1) / 2.828427,
+                        0,
+                        1
+                    );
+                    curve.foldShape[i] = smoothstep(radial) * 2 - 1;
+                    curve.tiltBias[i] = 0.62 + 0.38 * leftAmount;
+                }
+
+                return curve;
             };
 
-            // Create slide
+            const applyTextureToSlide = (mesh, texture) => {
+                mesh.material.map = texture;
+                mesh.material.needsUpdate = true;
+
+                const imgAspect = texture.image.width / texture.image.height;
+                const slideAspect = slideWidth / slideHeight;
+                if (imgAspect > slideAspect) {
+                    mesh.scale.set(1, slideAspect / imgAspect, 1);
+                } else {
+                    mesh.scale.set(imgAspect / slideAspect, 1, 1);
+                }
+            };
+
+            const requestTexture = (mesh) => {
+                const originalPath = mesh.userData.imagePath;
+                const optimizedPath = getOptimizedImageUrl(originalPath, {
+                    width: perf.textureWidth,
+                    quality: perf.quality,
+                });
+
+                const cached = textureCache.get(originalPath);
+                if (cached) {
+                    applyTextureToSlide(mesh, cached);
+                    return;
+                }
+
+                if (textureWaiters.has(originalPath)) {
+                    textureWaiters.get(originalPath).push(mesh);
+                    return;
+                }
+
+                textureWaiters.set(originalPath, [mesh]);
+
+                const onReady = (texture) => {
+                    downsampleTexture(texture, perf.textureMaxSize);
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    texture.anisotropy = 1;
+                    texture.generateMipmaps = false;
+                    texture.minFilter = THREE.LinearFilter;
+                    texture.magFilter = THREE.LinearFilter;
+                    textureCache.set(originalPath, texture);
+
+                    const waiters = textureWaiters.get(originalPath) || [];
+                    textureWaiters.delete(originalPath);
+                    waiters.forEach((waitingMesh) => applyTextureToSlide(waitingMesh, texture));
+                };
+
+                loader.load(optimizedPath, onReady, undefined, () => {
+                    loader.load(originalPath, onReady, undefined, (err) => {
+                        textureWaiters.delete(originalPath);
+                        console.warn(`Couldn't load image ${originalPath}`, err);
+                    });
+                });
+            };
+
             const createSlide = (index) => {
-                const geometry = new THREE.PlaneGeometry(slideWidth, slideHeight, 40, 20);
+                const geometry = new THREE.PlaneGeometry(
+                    slideWidth,
+                    slideHeight,
+                    perf.segmentsX,
+                    perf.segmentsY
+                );
                 const material = new THREE.MeshBasicMaterial({
                     color: new THREE.Color(0xffffff),
                     side: THREE.DoubleSide,
@@ -114,99 +260,50 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
 
                 const mesh = new THREE.Mesh(geometry, material);
                 mesh.position.y = index * (slideHeight + gap);
+                mesh.frustumCulled = true;
                 mesh.userData = {
-                    originalVertices: [...geometry.attributes.position.array],
+                    originalVertices: geometry.attributes.position.array.slice(),
+                    curve: precomputeCurve(geometry),
                     index,
                     currentTilt: 0,
                     currentYaw: 0,
+                    isFlat: true,
+                    textureRequested: false,
+                    imagePath: resolveImagePath(images[index % images.length], project),
                 };
-
-                // Cargar imagen
-                const imageIndex = index % images.length;
-                const img = images[imageIndex];
-                const imagePath = img.src
-                    ? img.src
-                    : (project.id === 'about' && img.id === 1)
-                        ? `${project.imagesPath}/about.png`
-                        : `${project.imagesPath}/${project.id}${img.id}.png`;
-
-                new THREE.TextureLoader().load(
-                    imagePath,
-                    (texture) => {
-                        correctImageColor(texture);
-                        material.map = texture;
-                        material.needsUpdate = true;
-
-                        const imgAspect = texture.image.width / texture.image.height;
-                        const slideAspect = slideWidth / slideHeight;
-
-                        if (imgAspect > slideAspect) {
-                            mesh.scale.y = slideAspect / imgAspect;
-                        } else {
-                            mesh.scale.x = imgAspect / slideAspect;
-                        }
-                    },
-                    undefined,
-                    (err) => console.warn(`Couldn't load image ${imagePath}`, err)
-                );
 
                 scene.add(mesh);
                 slides.push(mesh);
             };
 
-            // Create all slides
             for (let i = 0; i < slideCount; i++) createSlide(i);
 
-            // Position slides
             slides.forEach((slide) => {
                 slide.position.y -= totalHeight / 2;
                 slide.userData.targetY = slide.position.y;
                 slide.userData.currentY = slide.position.y;
             });
 
-            // Easing orgánico para la transición centro -> esquina
-            const smoothstep = (t) => t * t * (3 - 2 * t);
-
-            // Update curve: hoja cogida por la esquina superior izquierda.
-            // Esa esquina vuela y arrastra el resto; la superior derecha se voltea
-            // mucho menos. El lado derecho sigue con lag (inercia).
             const updateCurve = (mesh, distortionFactor, lagFactor, foldDirection) => {
                 const positionAttribute = mesh.geometry.attributes.position;
-                const originalVertices = mesh.userData.originalVertices;
+                const curve = mesh.userData.curve;
+                const count = positionAttribute.count;
 
-                const slideHalfHeight = slideHeight / 2;
-                const slideHalfWidth = slideWidth / 2;
+                if (distortionFactor < 0.001 && lagFactor < 0.001) {
+                    if (!mesh.userData.isFlat) {
+                        positionAttribute.array.set(mesh.userData.originalVertices);
+                        positionAttribute.needsUpdate = true;
+                        mesh.userData.isFlat = true;
+                    }
+                    return;
+                }
 
-                for (let i = 0; i < positionAttribute.count; i++) {
-                    const x = originalVertices[i * 3];
-                    const y = originalVertices[i * 3 + 1];
+                mesh.userData.isFlat = false;
 
-                    const nx = THREE.MathUtils.clamp(x / slideHalfWidth, -1, 1);
-                    const ny = THREE.MathUtils.clamp(y / slideHalfHeight, -1, 1);
-
-                    const leftAmount = (1 - nx) * 0.5;
-                    const topAmount = (1 + ny) * 0.5;
-
-                    // 1 en la esquina superior izquierda, cae hacia el resto de la hoja
-                    const topLeft = Math.pow(leftAmount, 1.55) * Math.pow(topAmount, 0.9);
-                    // La superior derecha sigue volteando, pero mucho menos
-                    const topRight =
-                        Math.pow(1 - leftAmount, 1.45) *
-                        Math.pow(topAmount, 1.15) *
-                        settings.rightCornerRatio;
-                    const cornerLift = Math.min(1, topLeft + topRight);
-
-                    // Distancia a la esquina cogida: el resto de la hoja llega más tarde
-                    const fromGrab = THREE.MathUtils.clamp(
-                        Math.hypot(nx + 1, ny - 1) / 2.828427,
-                        0,
-                        1
-                    );
-                    const localDistortion = THREE.MathUtils.lerp(
-                        distortionFactor,
-                        lagFactor,
-                        fromGrab * 0.82
-                    );
+                for (let i = 0; i < count; i++) {
+                    const fromGrab = curve.fromGrab[i];
+                    const localDistortion =
+                        distortionFactor + (lagFactor - distortionFactor) * (fromGrab * 0.82);
                     const intensity = settings.maxDistortion * localDistortion;
                     const tiltAmount = settings.tiltStrength * intensity;
                     const foldAmount = settings.bendStrength * intensity;
@@ -215,32 +312,21 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
                     const leadAmount = settings.leadStrength * intensity;
                     const tuckAmount = settings.tuckStrength * intensity;
 
-                    // Bisagra más marcada a la izquierda, como si tirara de esa esquina
-                    const tiltZ = -ny * tiltAmount * (0.62 + 0.38 * leftAmount);
+                    const tiltZ = -curve.ny[i] * tiltAmount * curve.tiltBias[i];
+                    const foldZ = curve.foldShape[i] * foldAmount * foldDirection;
+                    const liftZ = curve.liftShape[i] * grabAmount * foldDirection;
+                    const curlZ = curve.curlShape[i] * curlAmount * foldDirection;
+                    const leadY = -foldDirection * curve.topLeft[i] * leadAmount;
+                    const tuckX = foldDirection * curve.topLeft[i] * tuckAmount;
 
-                    // Pliegue papel: esquinas vs centro, sesgado a la izquierda
-                    const radial = (nx * nx * (0.35 + 0.65 * leftAmount) + ny * ny) * 0.5;
-                    const foldShape = smoothstep(radial) * 2 - 1;
-                    const foldZ = foldShape * foldAmount * foldDirection;
-
-                    // La esquina cogida se eleva y su punta se riza
-                    const liftZ = Math.pow(cornerLift, 1.25) * grabAmount * foldDirection;
-                    const curlZ = Math.pow(topLeft, 2.35) * curlAmount * foldDirection;
-
-                    // Inercia: esa esquina adelanta el movimiento y se mete al rizarse
-                    const leadY = -foldDirection * topLeft * leadAmount;
-                    const tuckX = foldDirection * topLeft * tuckAmount;
-
-                    positionAttribute.setX(i, x + tuckX);
-                    positionAttribute.setY(i, y + leadY);
+                    positionAttribute.setX(i, curve.x[i] + tuckX);
+                    positionAttribute.setY(i, curve.y[i] + leadY);
                     positionAttribute.setZ(i, tiltZ + foldZ + liftZ + curlZ);
                 }
 
                 positionAttribute.needsUpdate = true;
-                mesh.geometry.computeVertexNormals();
             };
 
-            // Event handlers
             const handleWheel = (e) => {
                 e.preventDefault();
                 const wheelStrength = Math.abs(e.deltaY) * 0.001;
@@ -295,7 +381,6 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
 
                 const resizeWidth = containerRef.current.clientWidth;
                 const resizeHeight = containerRef.current.clientHeight;
-
                 if (resizeWidth === 0 || resizeHeight === 0) return;
 
                 camera.aspect = resizeWidth / resizeHeight;
@@ -303,8 +388,12 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
                 renderer.setSize(resizeWidth, resizeHeight);
             };
 
-            // Animation loop
             const animate = (time) => {
+                if (isTabHidden) {
+                    animationId = null;
+                    return;
+                }
+
                 animationId = requestAnimationFrame(animate);
 
                 const deltaTime = lastTime ? (time - lastTime) / 1000 : 0.016;
@@ -316,7 +405,6 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
                     targetPosition += autoScrollSpeed;
                     const speedBasedDecay = 0.97 - Math.abs(autoScrollSpeed) * 0.5;
                     autoScrollSpeed *= Math.max(0.92, speedBasedDecay);
-
                     if (Math.abs(autoScrollSpeed) < 0.001) autoScrollSpeed = 0;
                 }
 
@@ -328,19 +416,15 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
                 velocityHistory.push(currentVelocity);
                 velocityHistory.shift();
 
-                // Dirección de pliegue suavizada: evita parpadeos cuando el
-                // delta de scroll pasa brevemente por 0 durante la desaceleración.
                 if (Math.abs(scrollDelta) > 0.0003) {
                     currentFoldDirection += (scrollDirection - currentFoldDirection) * 0.15;
                 }
 
                 const avgVelocity = velocityHistory.reduce((sum, val) => sum + val, 0) / velocityHistory.length;
-
                 if (avgVelocity > peakVelocity) peakVelocity = avgVelocity;
 
                 const velocityRatio = avgVelocity / (peakVelocity + 0.001);
                 const isDecelerating = velocityRatio < 0.7 && peakVelocity > 0.5;
-
                 peakVelocity *= 0.99;
 
                 const movementDistortion = Math.min(1.0, currentVelocity * 0.1);
@@ -368,37 +452,48 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
 
                     slide.userData.targetY = baseY;
                     slide.userData.currentY += (slide.userData.targetY - slide.userData.currentY) * settings.slideLerp;
+                    slide.position.y = slide.userData.currentY;
 
-                    const wrapThreshold = totalHeight / 2 + slideHeight;
-                    if (Math.abs(slide.userData.currentY) < wrapThreshold * 1.5) {
-                        slide.position.y = slide.userData.currentY;
-                        slide.userData.currentTilt += (targetTilt - slide.userData.currentTilt) * settings.tiltLerp;
-                        slide.userData.currentYaw += (targetYaw - slide.userData.currentYaw) * settings.tiltLerp;
-                        slide.rotation.x = slide.userData.currentTilt;
-                        // El lado izquierdo se acerca a cámara: la hoja gira desde la esquina cogida
-                        slide.rotation.y = slide.userData.currentYaw;
-                        updateCurve(slide, currentDistortionFactor, currentLagFactor, currentFoldDirection);
+                    const absY = Math.abs(slide.userData.currentY);
+                    const visible = absY < perf.viewRange;
+                    slide.visible = visible;
+
+                    if (!slide.userData.textureRequested && absY < perf.loadRange) {
+                        slide.userData.textureRequested = true;
+                        requestTexture(slide);
                     }
+
+                    if (!visible) return;
+
+                    slide.userData.currentTilt += (targetTilt - slide.userData.currentTilt) * settings.tiltLerp;
+                    slide.userData.currentYaw += (targetYaw - slide.userData.currentYaw) * settings.tiltLerp;
+                    slide.rotation.x = slide.userData.currentTilt;
+                    slide.rotation.y = slide.userData.currentYaw;
+                    updateCurve(slide, currentDistortionFactor, currentLagFactor, currentFoldDirection);
                 });
 
                 renderer.render(scene, camera);
             };
 
-            // Start animation
+            const handleVisibility = () => {
+                isTabHidden = document.hidden;
+                if (!isTabHidden && !animationId) animate();
+            };
+
             animate();
 
-            // Event listeners
             containerRef.current.addEventListener('wheel', handleWheel, { passive: false });
             containerRef.current.addEventListener('touchstart', handleTouchStart, { passive: false });
             containerRef.current.addEventListener('touchmove', handleTouchMove, { passive: false });
             containerRef.current.addEventListener('touchend', handleTouchEnd);
             window.addEventListener('resize', handleResize);
+            document.addEventListener('visibilitychange', handleVisibility);
 
-            // Cleanup function
             cleanupRef.current = () => {
                 if (animationId) cancelAnimationFrame(animationId);
 
                 window.removeEventListener('resize', handleResize);
+                document.removeEventListener('visibilitychange', handleVisibility);
 
                 if (containerRef.current) {
                     containerRef.current.removeEventListener('wheel', handleWheel);
@@ -409,12 +504,13 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
 
                 slides.forEach((slide) => {
                     if (slide.geometry) slide.geometry.dispose();
-                    if (slide.material) {
-                        if (slide.material.map) slide.material.map.dispose();
-                        slide.material.dispose();
-                    }
+                    if (slide.material) slide.material.dispose();
                     scene.remove(slide);
                 });
+
+                textureCache.forEach((texture) => texture.dispose());
+                textureCache.clear();
+                textureWaiters.clear();
 
                 if (containerRef.current && renderer.domElement && containerRef.current.contains(renderer.domElement)) {
                     containerRef.current.removeChild(renderer.domElement);
@@ -424,14 +520,13 @@ export default function SliderThree3Mobile({ images, project, navbarHeight }) {
             };
         };
 
-        // Iniciar después de un pequeño delay para asegurar que el DOM esté listo
         const timeoutId = setTimeout(initThree, 100);
 
         return () => {
             clearTimeout(timeoutId);
             if (cleanupRef.current) cleanupRef.current();
         };
-    }, [images, project]);
+    }, [images, project, variant]);
 
     return (
         <div

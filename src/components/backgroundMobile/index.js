@@ -62,6 +62,7 @@ export default function BackgroundMobile() {
                 images={mashedImages}
                 project={mashProject}
                 navbarHeight={0}
+                variant="mash"
             />
         </div>
     );
