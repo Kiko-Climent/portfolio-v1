@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useDarkMode } from '@/contexts/DarkModeContext';
-import SliderThree2Mobile from '@/components/SliderThree/SliderThree2Mobile';
+import SliderThree3Mobile from '@/components/SliderThree/SliderThree3Mobile';
 
 export default function ProjectImageSliderMobile({ project }) {
     const { isDarkMode } = useDarkMode();
@@ -35,7 +35,7 @@ export default function ProjectImageSliderMobile({ project }) {
             {/* SLIDER THREE.JS - Oculto para About Me (solo 1 foto) */}
             {!isAbout && (
                 <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25 }}>
-                    <SliderThree2Mobile 
+                    <SliderThree3Mobile 
                         images={images}
                         project={project}
                         navbarHeight={navbarHeight}

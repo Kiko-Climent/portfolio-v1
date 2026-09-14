@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import NavbarMobile from "@/components/navbar/NavbarMobile";
 import Footer3 from '@/components/footer/index3';
 import FooterMobile from '@/components/footer/FooterMobile';
 import BackgroundMobile from '@/components/backgroundMobile/index';
@@ -10,7 +9,6 @@ import { projects } from '@/components/data/projects';
 import ProjectImageSliderThree from '@/components/sliders/ProjectImageSliderThree';
 import ProjectImageSliderMobile from '@/components/sliders/ProjectImageSliderMobile';
 import HoverImageSlider from '@/components/sliders/index';
-import NavbarLoader from '@/components/navbar/NavbarLoader';
 import NavbarLoaderNew5 from '../../worktrees/NavbarLoaderNew5';
 import NavbarLoaderMobNew from '../../worktrees/NavbarLoaderMobNew';
 

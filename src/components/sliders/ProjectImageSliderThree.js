@@ -5,6 +5,8 @@ import gsap from 'gsap';
 import { SplitText } from 'gsap/SplitText';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 import SliderThree2 from '../SliderThree/index2';
+import SliderThree4 from '../SliderThree/index4';
+import SliderThree3 from '../SliderThree/index3';
 
 gsap.registerPlugin(SplitText);
 
@@ -189,7 +191,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
                     </div>
                 ) : (
                     // SliderThree para los demás proyectos
-                    <SliderThree2
+                    <SliderThree4
                         images={images}
                         project={project}
                         navbarHeight={navbarHeight}

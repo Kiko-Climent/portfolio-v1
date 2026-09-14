@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import SliderThree2Mobile from '@/components/SliderThree/SliderThree2Mobile';
+import SliderThree3Mobile from '@/components/SliderThree/SliderThree3Mobile';
 import { projects } from '@/components/data/projects';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 
@@ -58,7 +58,7 @@ export default function BackgroundMobile() {
 
     return (
         <div className={`absolute inset-0 w-full h-full z-0 ${backgroundClass}`}>
-            <SliderThree2Mobile
+            <SliderThree3Mobile
                 images={mashedImages}
                 project={mashProject}
                 navbarHeight={0}
