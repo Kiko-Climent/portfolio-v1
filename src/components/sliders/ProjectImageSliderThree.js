@@ -134,16 +134,16 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
 
     return (
         <div
-            className="fixed top-0 left-0 w-full h-screen flex z-10 transition-opacity"
+            className="fixed top-0 left-0 w-full h-screen z-10 transition-opacity"
             style={{
               opacity: isVisible ? 1 : 0,
               transitionDuration: '0.8s' // ⭐ MISMO TIMING QUE LA ANIMACIÓN DEL FOOTER
             }}
         >
-            <div className='w-1/2'>
+            <div className="relative z-20 w-1/2 h-full pointer-events-none">
                 <div
                     ref={textRef}
-                    className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1]"
+                    className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] pointer-events-auto"
                 >
                     {text.url ? (
                         <a
@@ -169,35 +169,33 @@ export default function ProjectImageSliderThree({ project, shouldHide = false })
                 </div>
             </div>
 
-            <div className="relative w-1/2 h-screen" style={{ minHeight: '100vh' }}>
-                {isAbout ? (
-                    // Vista estática para About: imagen repetida 2-3 veces en columna
-                    <div
-                        className="flex flex-col items-center justify-center h-full gap-8 px-8"
-                        style={{ paddingTop: `${navbarHeight}px` }}
-                    >
-                        {[1, 2, 3].map((index) => (
-                            <img
-                                key={index}
-                                src={getAboutImageSrc()}
-                                alt="About"
-                                className="object-contain"
-                                style={{
-                                    width: images[0]?.width || '40%',
-                                    maxHeight: 'calc((100vh - 200px) / 3)',
-                                }}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    // SliderThree para los demás proyectos
+            {isAbout ? (
+                <div
+                    className="absolute right-0 top-0 w-1/2 h-full z-[15] flex flex-col items-center justify-center gap-8 px-8"
+                    style={{ paddingTop: `${navbarHeight}px` }}
+                >
+                    {[1, 2, 3].map((index) => (
+                        <img
+                            key={index}
+                            src={getAboutImageSrc()}
+                            alt="About"
+                            className="object-contain"
+                            style={{
+                                width: images[0]?.width || '40%',
+                                maxHeight: 'calc((100vh - 200px) / 3)',
+                            }}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <div className="absolute inset-0 z-[15]">
                     <SliderThree4
                         images={images}
                         project={project}
                         navbarHeight={navbarHeight}
                     />
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }
