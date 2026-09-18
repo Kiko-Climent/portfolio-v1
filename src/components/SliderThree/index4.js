@@ -167,7 +167,7 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                     currentYaw: 0,
                     baseScaleX: 1,
                     baseScaleY: 1,
-                    cloth: { vacuum: 0, vacuumLag: 0 },
+                    cloth: { vacuum: 0, vacuumLag: 0, bulge: 0, bulgeLag: 0 },
                 };
 
                 const imageIndex = index % images.length;
@@ -222,8 +222,8 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                 const stretchLag = extras ? Math.max(0, extras.stretchLag ?? stretch) : stretch;
                 const vacuum = extras ? Math.max(0, extras.vacuum || 0) : 0;
                 const vacuumLag = extras ? Math.max(0, extras.vacuumLag ?? vacuum) : vacuum;
-                const bulge = extras ? Math.max(0, extras.bulge || 0) : 0;
-                const bulgeLag = extras ? Math.max(0, extras.bulgeLag ?? bulge) : bulge;
+                const bulge = extras ? extras.bulge || 0 : 0;
+                const bulgeLag = extras ? extras.bulgeLag ?? bulge : bulge;
 
                 const slideHalfHeight = slideHeight / 2;
                 const slideHalfWidth = slideWidth / 2;
@@ -353,7 +353,6 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                 duration: 1.05,
                 ease: 'power3.inOut',
                 stagger: 0.035,
-                restoreDelay: 0.1,
             };
 
             const recedeOthers = (except, departing) => {
@@ -372,10 +371,15 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                     const dist = Math.abs(slide.userData.index - except.userData.index);
                     const delay = Math.min(dist * RECEDE.stagger, 0.18);
                     const cloth = slide.userData.cloth;
+                    const toZ = departing ? RECEDE.z : 0;
+                    const toSx = slide.userData.baseScaleX * (departing ? RECEDE.scale : 1);
+                    const toSy = slide.userData.baseScaleY * (departing ? RECEDE.scale : 1);
 
                     if (departing) {
                         cloth.vacuum = Math.min(0.22, currentDistortionFactor);
                         cloth.vacuumLag = cloth.vacuum * 0.45;
+                        cloth.bulge = 0;
+                        cloth.bulgeLag = 0;
                         gsap.to(slide.rotation, {
                             x: 0,
                             y: 0,
@@ -383,19 +387,6 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                             duration: 0.42,
                             delay,
                             ease: 'power2.out',
-                        });
-                        gsap.to(slide.position, {
-                            z: RECEDE.z,
-                            duration: RECEDE.duration,
-                            delay,
-                            ease: RECEDE.ease,
-                        });
-                        gsap.to(slide.scale, {
-                            x: slide.userData.baseScaleX * RECEDE.scale,
-                            y: slide.userData.baseScaleY * RECEDE.scale,
-                            duration: RECEDE.duration,
-                            delay,
-                            ease: RECEDE.ease,
                         });
                         gsap.to(cloth, {
                             vacuum: 1.18,
@@ -411,30 +402,50 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                             onComplete: () => {
                                 cloth.vacuum = 0;
                                 cloth.vacuumLag = 0;
+                                cloth.bulge = 0;
+                                cloth.bulgeLag = 0;
                                 updateCurve(slide, 0, 0, 1);
                             },
                         });
                     } else {
-                        gsap.to(slide.position, {
-                            z: 0,
-                            duration: 0.85,
-                            delay: RECEDE.restoreDelay,
-                            ease: RECEDE.ease,
-                        });
-                        gsap.to(slide.scale, {
-                            x: slide.userData.baseScaleX,
-                            y: slide.userData.baseScaleY,
-                            duration: 0.85,
-                            delay: RECEDE.restoreDelay,
-                            ease: RECEDE.ease,
+                        cloth.vacuum = 0;
+                        cloth.vacuumLag = 0;
+                        cloth.bulge = 0;
+                        cloth.bulgeLag = 0;
+                        gsap.to(cloth, {
+                            bulge: 1,
+                            duration: 0.42,
+                            delay,
+                            ease: 'power2.out',
                         });
                         gsap.to(cloth, {
-                            vacuum: 0,
-                            duration: 0.8,
-                            delay: RECEDE.restoreDelay,
-                            ease: 'power3.out',
+                            bulge: 0,
+                            duration: 0.58,
+                            delay: delay + 0.42,
+                            ease: 'power3.inOut',
+                            onComplete: () => {
+                                cloth.vacuum = 0;
+                                cloth.vacuumLag = 0;
+                                cloth.bulge = 0;
+                                cloth.bulgeLag = 0;
+                                updateCurve(slide, 0, 0, 1);
+                            },
                         });
                     }
+
+                    gsap.to(slide.position, {
+                        z: toZ,
+                        duration: RECEDE.duration,
+                        delay,
+                        ease: RECEDE.ease,
+                    });
+                    gsap.to(slide.scale, {
+                        x: toSx,
+                        y: toSy,
+                        duration: RECEDE.duration,
+                        delay,
+                        ease: RECEDE.ease,
+                    });
                 });
             };
 
@@ -456,7 +467,7 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                     fromZ,
                     ctrlX: departing ? fromX : toX,
                     ctrlY: (fromY + toY) * 0.5,
-                    ctrlZ: Math.max(fromZ, toZ) + (departing ? 1.35 : 1.05),
+                    ctrlZ: Math.max(fromZ, toZ) + 1.35,
                     toX,
                     toY,
                     toZ,
@@ -465,6 +476,8 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                     stretch: 0,
                     bulge: departing ? 0.12 : 0,
                 };
+
+                const bulgePeak = departing ? 1 : -1;
 
                 focus.paperLag = pose.paper;
                 focus.stretchLag = 0;
@@ -476,14 +489,12 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                 focusTimeline = gsap.timeline({
                     defaults: { overwrite: 'auto' },
                     onComplete: () => {
-                        if (departing) {
-                            pose.bulge = 0;
-                            focus.bulgeLag = 0;
-                            focus.paper = 0;
-                            focus.paperLag = 0;
-                            mesh.rotation.set(0, 0, 0);
-                            updateCurve(mesh, 0, 0, 1);
-                        }
+                        pose.bulge = 0;
+                        focus.bulgeLag = 0;
+                        focus.paper = 0;
+                        focus.paperLag = 0;
+                        mesh.rotation.set(0, 0, 0);
+                        updateCurve(mesh, 0, 0, 1);
                         onComplete?.();
                     },
                 });
@@ -502,33 +513,18 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                     onUpdate: () => applyFocusPose(mesh, pose),
                 }, 0);
 
-                if (departing) {
-                    focusTimeline.to(pose, {
-                        bulge: 1,
-                        duration: 0.4,
-                        ease: 'power2.out',
-                        onUpdate: () => applyFocusPose(mesh, pose),
-                    }, 0);
-                    focusTimeline.to(pose, {
-                        bulge: 0,
-                        duration: 0.62,
-                        ease: 'power3.inOut',
-                        onUpdate: () => applyFocusPose(mesh, pose),
-                    }, 0.48);
-                } else {
-                    focusTimeline.to(pose, {
-                        bulge: 0.55,
-                        duration: 0.28,
-                        ease: 'power2.out',
-                        onUpdate: () => applyFocusPose(mesh, pose),
-                    }, 0);
-                    focusTimeline.to(pose, {
-                        bulge: 0,
-                        duration: 0.68,
-                        ease: 'power3.out',
-                        onUpdate: () => applyFocusPose(mesh, pose),
-                    }, 0.26);
-                }
+                focusTimeline.to(pose, {
+                    bulge: bulgePeak,
+                    duration: 0.4,
+                    ease: 'power2.out',
+                    onUpdate: () => applyFocusPose(mesh, pose),
+                }, 0);
+                focusTimeline.to(pose, {
+                    bulge: 0,
+                    duration: 0.62,
+                    ease: 'power3.inOut',
+                    onUpdate: () => applyFocusPose(mesh, pose),
+                }, 0.48);
 
                 focusTimeline.to(pose, {
                     sx: toSx,
@@ -798,11 +794,15 @@ export default function SliderThree4({ images, project, navbarHeight }) {
                         slide.position.x = columnX;
                         slide.position.y = slide.userData.currentY;
                         const cloth = slide.userData.cloth;
-                        const lag = cloth.vacuum < cloth.vacuumLag ? 0.16 : 0.055;
-                        cloth.vacuumLag += (cloth.vacuum - cloth.vacuumLag) * lag;
+                        const vacuumLag = cloth.vacuum < cloth.vacuumLag ? 0.16 : 0.055;
+                        cloth.vacuumLag += (cloth.vacuum - cloth.vacuumLag) * vacuumLag;
+                        const toward = Math.abs(cloth.bulge) < Math.abs(cloth.bulgeLag) ? 0.16 : 0.08;
+                        cloth.bulgeLag += (cloth.bulge - cloth.bulgeLag) * toward;
                         updateCurve(slide, 0, 0, 1, {
                             vacuum: cloth.vacuum,
                             vacuumLag: cloth.vacuumLag,
+                            bulge: cloth.bulge,
+                            bulgeLag: cloth.bulgeLag,
                         });
                         return;
                     }
