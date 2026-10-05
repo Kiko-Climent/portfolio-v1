@@ -3,12 +3,11 @@
 import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useDarkMode } from '@/contexts/DarkModeContext';
+import { mediaKey, mediaSrc } from '@/lib/media';
 
+// Variante "md": la misma que precarga el hover del footer (src/lib/preload.js).
 function getImageSrc(project, img) {
-    if (project.id === 'about' && img.id === 1) {
-        return `${project.imagesPath}/about.png`;
-    }
-    return `${project.imagesPath}/${project.id}${img.id}.png`;
+    return mediaSrc(mediaKey(project, img.id), 'md');
 }
 
 export default function HoverImageSlider({ project }) {

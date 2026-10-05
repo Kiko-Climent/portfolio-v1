@@ -56,12 +56,24 @@ const renderRollStages = (text, charsRef, stages) => {
   });
 };
 
-const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
+// Si la red va muy lenta, como mucho se espera esto (con los cuadrados girando)
+// antes de entrar igualmente; lo que falte aparece en cuanto llega.
+const MAX_ASSET_WAIT_MS = 8000;
+
+// isReady: true cuando lo imprescindible para la home ya está descargado
+// (src/lib/preload.js). Por defecto true para usos sin precarga (/tests).
+const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showLoader, setShowLoader] = useState(true);
   const [showNavbarContent, setShowNavbarContent] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  // La timeline se crea una sola vez; estas refs le dan los valores actuales
+  // sin tener que relanzarla.
+  const onLoadingCompleteRef = useRef(onLoadingComplete);
+  const isReadyRef = useRef(isReady);
+  const leaveIntroRef = useRef(null);
 
   const loaderRef = useRef(null);
   const titleCharsRef = useRef([]);
@@ -86,10 +98,23 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
   const subtitle2Stages = [null, ACTIVE];
 
   useEffect(() => {
+    onLoadingCompleteRef.current = onLoadingComplete;
+  }, [onLoadingComplete]);
+
+  // Si la timeline ya llegó al final y estaba esperando a la precarga, este es
+  // el momento de dejar que los cuadrados viajen a la esquina.
+  useEffect(() => {
+    isReadyRef.current = isReady;
+    if (isReady) leaveIntroRef.current?.();
+  }, [isReady]);
+
+  useEffect(() => {
     if (!titleCharsRef.current.length || !subtitleCharsRef.current.length || !subtitle2CharsRef.current.length) return;
 
     let rotationAnim = null;
     let rotationAnim2 = null;
+    const timers = [];
+    const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
     const allChars = [...titleCharsRef.current, ...subtitleCharsRef.current, ...subtitle2CharsRef.current];
     gsap.set(allChars, { y: '0em' });
@@ -169,7 +194,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
     const moveSquaresToNavbar = () => {
       setIsTransitioning(true);
 
-      setTimeout(() => {
+      later(() => {
         if (squareRef.current) {
           squareRef.current.style.transition = 'all 0.8s cubic-bezier(0.9, 0, 0.1, 1)';
           squareRef.current.style.top = '1.7rem';
@@ -180,7 +205,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
         }
       }, 100);
 
-      setTimeout(() => {
+      later(() => {
         if (squareRef.current) {
           squareRef.current.style.left = 'calc(100% - 1.5rem)';
           squareRef.current.style.transform = 'translate(-50%, -50%)';
@@ -191,7 +216,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
         }
       }, 900);
 
-      setTimeout(() => {
+      later(() => {
         setShowLoader(false);
         setShowNavbarContent(true);
         // Se vacía de color justo cuando aparece el navbar — misma curva que
@@ -200,14 +225,12 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
           square2Ref.current.style.transition = 'background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
           square2Ref.current.style.backgroundColor = 'transparent';
         }
-        if (onLoadingComplete) {
-          onLoadingComplete();
-        }
+        onLoadingCompleteRef.current?.();
       }, 2000);
 
       // Una vez ya se vació de color (300ms), el segundo cuadrado desaparece
       // del todo — solo queda el primero como toggle real.
-      setTimeout(() => {
+      later(() => {
         if (square2Ref.current) {
           square2Ref.current.style.transition = 'opacity 0.3s ease-out';
           square2Ref.current.style.opacity = '0';
@@ -329,28 +352,42 @@ const NavbarLoaderNew5 = ({ onLoadingComplete }) => {
       '+=0.8'
     );
 
-    // 8) Solo quedan los dos cuadrados: paran de girar y viajan juntos a la esquina
+    // 8) Solo quedan los dos cuadrados: paran de girar y viajan juntos a la
+    //    esquina. Si lo imprescindible de la home aún no ha llegado, siguen
+    //    girando —ese es el estado de carga— hasta que llegue (o hasta el tope).
     tl.call(() => {
-      if (rotationAnim) rotationAnim.stop();
-      if (rotationAnim2) rotationAnim2.stop();
-      moveSquaresToNavbar();
+      let hasLeft = false;
+      const leave = () => {
+        if (hasLeft) return;
+        hasLeft = true;
+        leaveIntroRef.current = null;
+        if (rotationAnim) rotationAnim.stop();
+        if (rotationAnim2) rotationAnim2.stop();
+        moveSquaresToNavbar();
+      };
+
+      if (isReadyRef.current) {
+        leave();
+      } else {
+        leaveIntroRef.current = leave;
+        later(leave, MAX_ASSET_WAIT_MS);
+      }
     }, [], '+=0.3');
 
     return () => {
       tl.kill();
+      timers.forEach(clearTimeout);
+      leaveIntroRef.current = null;
       if (rotationAnim) rotationAnim.stop();
       if (rotationAnim2) rotationAnim2.stop();
     };
-    // Ojo: NO añadir isDarkMode aquí. Este efecto no lo usa en ningún punto
-    // de su cuerpo (los colores de titleStages/subtitleStages ya se
-    // recalculan en cada render normal), pero si se incluye como
-    // dependencia, cada vez que se pulsa el cuadrado para cambiar de modo
-    // claro/oscuro (ya con el navbar terminado) este efecto se relanza
-    // entero — reconstruyendo y disparando otra vez la timeline completa,
-    // incluido el segundo cuadrado viajando desde fuera de pantalla hasta
-    // la esquina, por encima del navbar ya en su sitio.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onLoadingComplete]);
+    // Se crea una sola vez. Ojo: NO añadir dependencias (ni isDarkMode ni el
+    // callback): si este efecto se relanza con el navbar ya terminado,
+    // reconstruye y dispara otra vez la timeline completa — el cuadrado del
+    // toggle parpadea, se pone a girar y el segundo cuadrado vuelve a viajar
+    // hasta la esquina por encima del navbar. Los valores que cambian llegan
+    // por refs (onLoadingCompleteRef, isReadyRef).
+  }, []);
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'} transition-colors duration-300`}>

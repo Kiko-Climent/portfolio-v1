@@ -20,6 +20,33 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Imágenes
+
+Las capturas originales viven en `public/{about,alt,johnny,mmdiscos,salon}/*.png`, pero la web
+nunca las sirve tal cual: `scripts/optimize-images.mjs` genera variantes WebP en `public/media/`
+y un manifest con dimensiones y color dominante en `src/lib/media-manifest.json`.
+
+| Variante | Tamaño | Uso |
+| --- | --- | --- |
+| `thumb` | 384 px de ancho | miniaturas de la grid de escritorio |
+| `sm` | lado mayor 640 px | texturas en móvil |
+| `md` | lado mayor 1280 px | hover, flicker del footer, columna del slider 3D |
+| `lg` | lado mayor 1920 px | imagen en detalle del slider en pantallas retina |
+
+`getOptimizedImageUrl(src, { width })` (`src/lib/optimizedImage.js`) devuelve la variante más
+pequeña que cubre ese ancho; solo si una imagen aún no está en el manifest recurre a
+`/_next/image`. Al añadir o cambiar una imagen:
+
+```bash
+npm run images
+```
+
+y commitea `public/media/` y `src/lib/media-manifest.json`. El script también corre solo antes de
+cada `npm run build` y únicamente re-codifica lo que ha cambiado.
+
+La precarga de la intro (qué se descarga antes de que los cuadrados viajen a la esquina) está en
+`src/lib/preload.js`; los componentes con Three.js se cargan aparte desde `src/lib/lazyComponents.js`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

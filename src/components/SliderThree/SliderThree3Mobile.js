@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { getOptimizedImageUrl } from '@/lib/optimizedImage';
+import gsap from 'gsap';
+import { loadTextureSource, mediaAspect, mediaColor, mediaKey, mediaSrc } from '@/lib/media';
+import { createTexture, destroyRenderer } from '@/lib/textures';
 
 const getPerfProfile = (variant, imageCount) => {
     const mash = variant === 'mash' || imageCount > 18;
@@ -11,9 +13,6 @@ const getPerfProfile = (variant, imageCount) => {
         mash,
         segmentsX: mash ? 20 : 28,
         segmentsY: mash ? 10 : 16,
-        textureWidth: mash ? 640 : 1080,
-        textureMaxSize: mash ? 640 : 1080,
-        quality: mash ? 50 : 75,
         pixelRatio: mash ? 1.25 : 1.5,
         antialias: false,
         loopCopies: mash ? 1 : 2,
@@ -22,36 +21,35 @@ const getPerfProfile = (variant, imageCount) => {
     };
 };
 
-const downsampleTexture = (texture, maxSize) => {
-    const image = texture.image;
-    if (!image || !image.width || !image.height) return texture;
+// Las variantes "sm" (lado mayor 640px) ya vienen del tamaño justo para un
+// canvas con pixelRatio ≤ 1.5: no hace falta reescalar nada en el móvil.
+const TEXTURE_SIZE = 'sm';
 
-    const largest = Math.max(image.width, image.height);
-    if (largest <= maxSize) return texture;
+const resolveMediaKey = (img, project) => img.key ?? mediaKey(project, img.id);
 
-    const scale = maxSize / largest;
-    const width = Math.max(1, Math.round(image.width * scale));
-    const height = Math.max(1, Math.round(image.height * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    ctx.drawImage(image, 0, 0, width, height);
-    texture.image = canvas;
-    texture.needsUpdate = true;
-    return texture;
+// Por debajo de esto la escena se considera quieta y se deja de renderizar.
+const SETTLE_EPSILON = 1e-4;
+
+// Misma cortina que el grid de escritorio (clip-path de abajo arriba) y que
+// la galería de escritorio: aquí vive en el shader porque cada imagen es una
+// hoja WebGL. La de llegada (todas las imágenes) espera un poco más; la de
+// la galería elegida en el footer arranca en cuanto el slider se monta.
+const CURTAIN = {
+    duration: 1.1,
+    ease: 'expo.out',
+    zoomFrom: 1.12,
+    stagger: 0.12,
+    mashDelay: 0.2,
+    detailDelay: 0.12,
+    readyAt: 0.6, // fracción a partir de la cual el texto puede entrar, como en desktop
 };
 
-const resolveImagePath = (img, project) => {
-    if (img.src) return img.src;
-    if (project.id === 'about' && img.id === 1) return `${project.imagesPath}/about.png`;
-    return `${project.imagesPath}/${project.id}${img.id}.png`;
-};
-
-export default function SliderThree3Mobile({ images, project, navbarHeight, variant = 'detail' }) {
+export default function SliderThree3Mobile({ images, project, navbarHeight, variant = 'detail', onImagesReady }) {
     const containerRef = useRef(null);
     const rendererRef = useRef(null);
     const cleanupRef = useRef(null);
+    const onImagesReadyRef = useRef(onImagesReady);
+    onImagesReadyRef.current = onImagesReady;
 
     useEffect(() => {
         if (!containerRef.current || !images.length) return;
@@ -69,10 +67,18 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
 
             const perf = getPerfProfile(variant, images.length);
             let animationId = null;
+            let disposed = false;
             const slides = [];
             const textureCache = new Map();
             const textureWaiters = new Map();
-            const loader = new THREE.TextureLoader();
+
+            // Render bajo demanda: con la escena quieta no se pinta (batería y
+            // temperatura del móvil). Cualquier interacción o textura nueva
+            // reabre la ventana de render.
+            let renderUntil = performance.now() + 1000;
+            const keepRendering = (ms = 250) => {
+                renderUntil = Math.max(renderUntil, performance.now() + ms);
+            };
 
             const renderer = new THREE.WebGLRenderer({
                 alpha: true,
@@ -191,11 +197,7 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                 return curve;
             };
 
-            const applyTextureToSlide = (mesh, texture) => {
-                mesh.material.map = texture;
-                mesh.material.needsUpdate = true;
-
-                const imgAspect = texture.image.width / texture.image.height;
+            const fitSlideToAspect = (mesh, imgAspect) => {
                 const slideAspect = slideWidth / slideHeight;
                 if (imgAspect > slideAspect) {
                     mesh.scale.set(1, slideAspect / imgAspect, 1);
@@ -204,63 +206,99 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                 }
             };
 
-            const requestTexture = (mesh) => {
-                const originalPath = mesh.userData.imagePath;
-                const optimizedPath = getOptimizedImageUrl(originalPath, {
-                    width: perf.textureWidth,
-                    quality: perf.quality,
-                });
+            let onSlideTexture = () => {};
 
-                const cached = textureCache.get(originalPath);
+            const applyTextureToSlide = (mesh, texture) => {
+                mesh.material.map = texture;
+                mesh.material.color.set(0xffffff);
+                mesh.material.needsUpdate = true;
+                mesh.userData.textureReady = true;
+                fitSlideToAspect(mesh, texture.image.width / texture.image.height);
+                keepRendering();
+                onSlideTexture(mesh);
+            };
+
+            // Las texturas llegan ya decodificadas (ImageBitmap) desde la caché
+            // compartida; la intro ha precargado las primeras.
+            const requestTexture = (mesh) => {
+                const url = mesh.userData.textureUrl;
+
+                const cached = textureCache.get(url);
                 if (cached) {
                     applyTextureToSlide(mesh, cached);
                     return;
                 }
 
-                if (textureWaiters.has(originalPath)) {
-                    textureWaiters.get(originalPath).push(mesh);
+                if (textureWaiters.has(url)) {
+                    textureWaiters.get(url).push(mesh);
                     return;
                 }
 
-                textureWaiters.set(originalPath, [mesh]);
+                textureWaiters.set(url, [mesh]);
 
-                const onReady = (texture) => {
-                    downsampleTexture(texture, perf.textureMaxSize);
-                    texture.colorSpace = THREE.SRGBColorSpace;
-                    texture.anisotropy = 1;
-                    texture.generateMipmaps = false;
-                    texture.minFilter = THREE.LinearFilter;
-                    texture.magFilter = THREE.LinearFilter;
-                    textureCache.set(originalPath, texture);
+                loadTextureSource(url)
+                    .then((source) => {
+                        if (disposed) return;
+                        const texture = createTexture(source);
+                        texture.anisotropy = 1;
+                        texture.generateMipmaps = false;
+                        texture.minFilter = THREE.LinearFilter;
+                        texture.magFilter = THREE.LinearFilter;
+                        textureCache.set(url, texture);
 
-                    const waiters = textureWaiters.get(originalPath) || [];
-                    textureWaiters.delete(originalPath);
-                    waiters.forEach((waitingMesh) => applyTextureToSlide(waitingMesh, texture));
-                };
-
-                loader.load(optimizedPath, onReady, undefined, () => {
-                    loader.load(originalPath, onReady, undefined, (err) => {
-                        textureWaiters.delete(originalPath);
-                        console.warn(`Couldn't load image ${originalPath}`, err);
+                        const waiters = textureWaiters.get(url) || [];
+                        textureWaiters.delete(url);
+                        waiters.forEach((waitingMesh) => applyTextureToSlide(waitingMesh, texture));
+                    })
+                    .catch((err) => {
+                        textureWaiters.delete(url);
+                        console.warn(`Couldn't load image ${url}`, err);
                     });
-                });
             };
 
             const createSlide = (index) => {
+                const key = resolveMediaKey(images[index % images.length], project);
                 const geometry = new THREE.PlaneGeometry(
                     slideWidth,
                     slideHeight,
                     perf.segmentsX,
                     perf.segmentsY
                 );
+                // Mientras llega la textura: su color dominante y su proporción real.
+                // La cortina (uClip.x = borde inferior, uClip.y = superior) arranca
+                // tapada: es el clip-path del grid, en el espacio de la hoja.
+                const curtain = {
+                    uClip: { value: new THREE.Vector2(0, -0.01) },
+                    uZoom: { value: CURTAIN.zoomFrom },
+                    uZoomOrigin: { value: new THREE.Vector2(0.5, 0) },
+                };
                 const material = new THREE.MeshBasicMaterial({
-                    color: new THREE.Color(0xffffff),
+                    color: new THREE.Color(mediaColor(key)),
                     side: THREE.DoubleSide,
+                    alphaTest: 0.01,
                 });
+                material.customProgramCacheKey = () => 'mobile-curtain';
+                material.onBeforeCompile = (shader) => {
+                    Object.assign(shader.uniforms, curtain);
+                    shader.fragmentShader = shader.fragmentShader
+                        .replace(
+                            '#include <common>',
+                            '#include <common>\nuniform vec2 uClip;\nuniform float uZoom;\nuniform vec2 uZoomOrigin;'
+                        )
+                        .replace(
+                            '#include <map_fragment>',
+                            `#ifdef USE_MAP
+                                if ( vMapUv.y < uClip.x || vMapUv.y > uClip.y ) discard;
+                                vec4 sampledDiffuseColor = texture2D( map, uZoomOrigin + ( vMapUv - uZoomOrigin ) / uZoom );
+                                diffuseColor *= sampledDiffuseColor;
+                            #endif`
+                        );
+                };
 
                 const mesh = new THREE.Mesh(geometry, material);
                 mesh.position.y = index * (slideHeight + gap);
                 mesh.frustumCulled = true;
+                fitSlideToAspect(mesh, 1 / mediaAspect(key));
                 mesh.userData = {
                     originalVertices: geometry.attributes.position.array.slice(),
                     curve: precomputeCurve(geometry),
@@ -269,7 +307,11 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                     currentYaw: 0,
                     isFlat: true,
                     textureRequested: false,
-                    imagePath: resolveImagePath(images[index % images.length], project),
+                    textureReady: false,
+                    textureUrl: mediaSrc(key, TEXTURE_SIZE),
+                    intro: false,
+                    reveal: false,
+                    curtain,
                 };
 
                 scene.add(mesh);
@@ -278,10 +320,127 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
 
             for (let i = 0; i < slideCount; i++) createSlide(i);
 
+            // La misma posición envuelta que usa el bucle de animación: si no,
+            // la cortina cae en hojas que el carrusel saca de pantalla y las
+            // que se ven entran ya descubiertas.
+            slides.forEach((slide, i) => {
+                let baseY = i * slideUnit;
+                baseY = ((baseY % totalHeight) + totalHeight) % totalHeight;
+                if (baseY > totalHeight / 2) baseY -= totalHeight;
+                slide.position.y = baseY;
+                slide.userData.targetY = baseY;
+                slide.userData.currentY = baseY;
+            });
+
+            // Solo las hojas visibles al montar hacen la cortina (de arriba
+            // abajo). El resto queda ya descubierto: al hacer scroll entran enteras.
+            const introSlides = slides
+                .filter((slide) => Math.abs(slide.userData.currentY) < perf.viewRange)
+                .sort((a, b) => b.userData.currentY - a.userData.currentY);
+
             slides.forEach((slide) => {
-                slide.position.y -= totalHeight / 2;
-                slide.userData.targetY = slide.position.y;
-                slide.userData.currentY = slide.position.y;
+                if (!introSlides.includes(slide)) {
+                    slide.userData.curtain.uClip.value.set(0, 1);
+                    slide.userData.curtain.uZoom.value = 1;
+                }
+            });
+            introSlides.forEach((slide) => {
+                slide.userData.intro = true;
+            });
+
+            let curtainTimeline = null;
+            let curtainPlayed = false;
+            let introReady = 0;
+
+            const playCurtain = () => {
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                const delay = variant === 'mash' ? CURTAIN.mashDelay : CURTAIN.detailDelay;
+                curtainTimeline = gsap.timeline({
+                    delay: reduceMotion ? 0 : delay,
+                    onUpdate: () => keepRendering(120),
+                });
+
+                introSlides.forEach((slide, i) => {
+                    if (!slide.userData.textureReady) return;
+                    slide.userData.reveal = true;
+                    const curtain = slide.userData.curtain;
+                    curtain.uZoomOrigin.value.set(0.5, 0);
+                    if (reduceMotion) {
+                        curtain.uClip.value.set(0, 1);
+                        curtain.uZoom.value = 1;
+                        return;
+                    }
+                    const at = i * CURTAIN.stagger;
+                    curtainTimeline.to(
+                        curtain.uClip.value,
+                        { y: 1, duration: CURTAIN.duration, ease: CURTAIN.ease },
+                        at
+                    );
+                    curtainTimeline.to(
+                        curtain.uZoom,
+                        { value: 1, duration: CURTAIN.duration, ease: CURTAIN.ease },
+                        at
+                    );
+                });
+
+                const readyCount = introSlides.filter((slide) => slide.userData.textureReady).length;
+                const lastAt = Math.max(0, readyCount - 1) * CURTAIN.stagger;
+                curtainTimeline.call(
+                    () => onImagesReadyRef.current?.(),
+                    null,
+                    reduceMotion ? 0 : lastAt + CURTAIN.duration * CURTAIN.readyAt
+                );
+
+                const span =
+                    delay +
+                    Math.max(0, introSlides.length - 1) * CURTAIN.stagger +
+                    CURTAIN.duration +
+                    0.3;
+                keepRendering(span * 1000);
+            };
+
+            const startReveal = () => {
+                if (curtainPlayed || disposed) return;
+                curtainPlayed = true;
+                clearTimeout(curtainFailSafe);
+                // Visibles pero tapadas, para que compileAsync coja el shader
+                // con la textura. El clip sigue cerrado hasta playCurtain.
+                introSlides.forEach((slide) => {
+                    if (!slide.userData.textureReady) return;
+                    slide.userData.reveal = true;
+                    slide.visible = true;
+                });
+                keepRendering(400);
+                const begin = () => {
+                    if (!disposed) playCurtain();
+                };
+                renderer.compileAsync(scene, camera).then(begin, begin);
+            };
+
+            const curtainFailSafe = setTimeout(startReveal, 2500);
+
+            onSlideTexture = (mesh) => {
+                if (!mesh.userData.intro || mesh.userData.introCounted) return;
+                mesh.userData.introCounted = true;
+                introReady += 1;
+                if (!curtainPlayed && introReady >= introSlides.length) startReveal();
+                else if (curtainPlayed) {
+                    const ref = introSlides.find((slide) => slide.userData.reveal)?.userData.curtain;
+                    if (ref) {
+                        mesh.userData.curtain.uClip.value.copy(ref.uClip.value);
+                        mesh.userData.curtain.uZoom.value = ref.uZoom.value;
+                    } else {
+                        mesh.userData.curtain.uClip.value.set(0, 1);
+                        mesh.userData.curtain.uZoom.value = 1;
+                    }
+                    mesh.userData.reveal = true;
+                    keepRendering();
+                }
+            };
+
+            introSlides.forEach((slide) => {
+                slide.userData.textureRequested = true;
+                requestTexture(slide);
             });
 
             const updateCurve = (mesh, distortionFactor, lagFactor, foldDirection) => {
@@ -329,6 +488,7 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
 
             const handleWheel = (e) => {
                 e.preventDefault();
+                keepRendering();
                 const wheelStrength = Math.abs(e.deltaY) * 0.001;
                 targetDistortionFactor = Math.min(1.0, targetDistortionFactor + wheelStrength);
 
@@ -350,6 +510,7 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
 
             const handleTouchMove = (e) => {
                 e.preventDefault();
+                keepRendering();
                 const touchY = e.touches[0].clientY;
                 const deltaY = touchY - touchLastY;
                 touchLastY = touchY;
@@ -386,6 +547,7 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                 camera.aspect = resizeWidth / resizeHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(resizeWidth, resizeHeight);
+                keepRendering();
             };
 
             const animate = (time) => {
@@ -442,6 +604,12 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                 const targetTilt = settings.maxTiltAngle * currentDistortionFactor * currentFoldDirection;
                 const targetYaw = settings.maxYawAngle * currentDistortionFactor * currentFoldDirection;
 
+                let sceneMoving =
+                    isScrolling ||
+                    Math.abs(targetPosition - currentPosition) > SETTLE_EPSILON ||
+                    currentDistortionFactor > SETTLE_EPSILON ||
+                    currentLagFactor > SETTLE_EPSILON;
+
                 slides.forEach((slide, i) => {
                     let baseY = i * slideUnit - currentPosition;
                     baseY = ((baseY % totalHeight) + totalHeight) % totalHeight;
@@ -455,15 +623,25 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                     slide.position.y = slide.userData.currentY;
 
                     const absY = Math.abs(slide.userData.currentY);
-                    const visible = absY < perf.viewRange;
-                    slide.visible = visible;
+                    const inView = absY < perf.viewRange;
+                    // Las de la cortina no se pintan hasta que su textura está
+                    // y el reveal ha empezado: si no, se vería el plano de color.
+                    slide.visible = inView && (!slide.userData.intro || slide.userData.reveal);
 
                     if (!slide.userData.textureRequested && absY < perf.loadRange) {
                         slide.userData.textureRequested = true;
                         requestTexture(slide);
                     }
 
-                    if (!visible) return;
+                    if (!slide.visible) return;
+
+                    if (
+                        Math.abs(slide.userData.targetY - slide.userData.currentY) > SETTLE_EPSILON ||
+                        Math.abs(targetTilt - slide.userData.currentTilt) > SETTLE_EPSILON ||
+                        Math.abs(targetYaw - slide.userData.currentYaw) > SETTLE_EPSILON
+                    ) {
+                        sceneMoving = true;
+                    }
 
                     slide.userData.currentTilt += (targetTilt - slide.userData.currentTilt) * settings.tiltLerp;
                     slide.userData.currentYaw += (targetYaw - slide.userData.currentYaw) * settings.tiltLerp;
@@ -472,12 +650,17 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                     updateCurve(slide, currentDistortionFactor, currentLagFactor, currentFoldDirection);
                 });
 
-                renderer.render(scene, camera);
+                if (sceneMoving || performance.now() < renderUntil) {
+                    renderer.render(scene, camera);
+                }
             };
 
             const handleVisibility = () => {
                 isTabHidden = document.hidden;
-                if (!isTabHidden && !animationId) animate();
+                if (!isTabHidden && !animationId) {
+                    keepRendering();
+                    animate();
+                }
             };
 
             animate();
@@ -490,6 +673,9 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
             document.addEventListener('visibilitychange', handleVisibility);
 
             cleanupRef.current = () => {
+                disposed = true;
+                clearTimeout(curtainFailSafe);
+                if (curtainTimeline) curtainTimeline.kill();
                 if (animationId) cancelAnimationFrame(animationId);
 
                 window.removeEventListener('resize', handleResize);
@@ -516,7 +702,7 @@ export default function SliderThree3Mobile({ images, project, navbarHeight, vari
                     containerRef.current.removeChild(renderer.domElement);
                 }
 
-                renderer.dispose();
+                destroyRenderer(renderer);
             };
         };
 

@@ -1,35 +1,15 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { projects } from '@/components/data/projects';
-import WaveImage from '@/components/tools/WaveImage';
+import { gridImages as images } from '@/components/data/grid';
+import { getMedia, mediaAspect, mediaSrc } from '@/lib/media';
+
+// Three.js en su propio chunk (lo precarga la intro, ver src/lib/preload.js).
+const WaveImage = dynamic(() => import('@/components/tools/WaveImage'), { ssr: false });
 
 export default function PortfolioGridThree({ activeProject, clickedProject, isVisible = true, onHover }) {
-  const images = [];
-
-  // Johnny: índices 0-12 (13 imágenes)
-  for (let i = 1; i <= 13; i++) {
-    images.push({ src: `/johnny/johnny${i}.png`, project: 'johnny', id: i });
-  }
-
-  // Salon: índices 13-23 (11 imágenes)
-  for (let i = 1; i <= 11; i++) {
-    images.push({ src: `/salon/salon${i}.png`, project: 'salon', id: i });
-  }
-
-  // Alt: índices 24-30 (7 imágenes)
-  for (let i = 9; i <= 15; i++) {
-    images.push({ src: `/alt/alt${i}.png`, project: 'alt', id: i });
-  }
-
-  // MMDiscos: índices 31-39 (9 imágenes)
-  for (let i = 1; i <= 9; i++) {
-    images.push({ src: `/mmdiscos/mmdiscos${i}.png`, project: 'mmdiscos', id: i });
-  }
-
-  // About: índice 39 (1 imagen)
-  images.push({ src: `/about/about.png`, project: 'about', id: 1 });
-
   const [hoveredImage, setHoveredImage] = useState(null);
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [availableHeight, setAvailableHeight] = useState(null);
@@ -51,7 +31,7 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
     });
     
     return delays;
-  }, [images.length]);
+  }, []);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -162,12 +142,14 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
 
   const isHidden = clickedProject !== null;
 
-  const navbar = document.querySelector('[data-navbar]');
-  const actualNavbarHeight = navbar?.offsetHeight || 0;
+  // Detalle del hover: variante "md" y su proporción real (sin medir la imagen).
+  const waveSrc = hoveredImageConfig && imageDimensions ? mediaSrc(hoveredImage.key, 'md') : null;
+  const waveWidth = imageDimensions?.width || 0;
+  const waveHeight = hoveredImageConfig ? waveWidth * mediaAspect(hoveredImage.key) : 0;
 
   const waveImagePosition = {
     position: 'fixed',
-    top: `${actualNavbarHeight + 16}px`,
+    top: `${navbarHeight + 16}px`,
     right: '1rem',
     transform: 'none'
   };
@@ -179,7 +161,7 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
       <div
         className="absolute left-4 right-4 box-border transition-all duration-700 ease-in-out"
         style={{
-          top: `${actualNavbarHeight + 16}px`,
+          top: `${navbarHeight + 16}px`,
           height: `${availableHeight}px`,
           opacity: finalOpacity,
           transform: isHidden ? 'translateX(100%)' : 'translateX(0)',
@@ -197,13 +179,14 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
           "
         >
           {images.map((image, index) => {
-            const isProjectActive = activeProject === image.project || 
+            const isProjectActive = activeProject === image.project ||
                                     (hoveredImage && hoveredImage.project === image.project);
             const opacity = isProjectActive ? 1 : 0.6;
             const blur = isProjectActive ? 0 : '4px';
-            
+            const media = getMedia(image.key);
+
             const animationDelay = randomDelays[index];
-            
+
             return (
               <div
                 key={index}
@@ -214,7 +197,7 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
                   flex
                   justify-center
                   items-start
-                  ${animationComplete ? 'transition-all duration-300' : ''}
+                  ${animationComplete ? 'transition-[opacity,filter] duration-300' : ''}
                 `}
                 style={{ 
                   opacity: startAnimation ? opacity : 0,
@@ -232,8 +215,13 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
                   onHover?.(null);
                 }}
               >
+                {/* Miniatura de 384px precargada durante la intro; width/height
+                    reservan su hueco aunque todavía no haya llegado. */}
                 <img
-                  src={image.src}
+                  src={mediaSrc(image.key, 'thumb')}
+                  width={media?.w}
+                  height={media?.h}
+                  decoding="async"
                   alt={`Portfolio image ${index + 1}`}
                   className="max-w-full max-h-full object-contain block"
                 />
@@ -243,19 +231,17 @@ export default function PortfolioGridThree({ activeProject, clickedProject, isVi
         </div>
       </div>
 
-      {hoveredImageConfig && imageDimensions && isVisible && (
+      {/* Siempre montado mientras la grid es visible: reutiliza un único
+          contexto WebGL en todos los hovers (src = null → oculto). */}
+      {isVisible && (
         <WaveImage
-        src={`${hoveredImageConfig.project.imagesPath}/${hoveredImageConfig.project.id === 'about' && hoveredImageConfig.id === 1 ? 'about' : `${hoveredImageConfig.project.id}${hoveredImageConfig.id}`}.png`}
-          alt={`Preview ${hoveredImageConfig.project.id} ${hoveredImageConfig.id}`}
+          src={waveSrc}
+          width={waveWidth}
+          height={waveHeight}
           className="will-change-transform z-40"
-          isVisible={true}
           style={{
             ...waveImagePosition,
-            width: imageDimensions.width,
-            height: imageDimensions.height,
             maxHeight: `${availableHeight * 0.8}px`,
-            objectFit: 'contain',
-            pointerEvents: 'none'
           }}
         />
       )}

@@ -61,7 +61,7 @@ const ANIM = {
   },
 };
 
-export default function Footer3({ activeProject, onHover, onProjectClick, isVisible = true }) {
+export default function Footer3({ activeProject, onHover, onProjectClick, isVisible = true, backReady = false }) {
   const { isDarkMode } = useDarkMode();
   const items = [
     { title: "Johnny Carretes", number: "01", id: "johnny" },
@@ -78,6 +78,12 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
   const clickedTitleContainerRef = useRef(null);
   const isDarkModeRef = useRef(isDarkMode);
   isDarkModeRef.current = isDarkMode;
+  // "back menu" entra cuando el título ya está dentro y la galería avisa de
+  // que está entera en pantalla (backReady): así no compite con la carga del
+  // slider (texturas) y su animación no da trompicones.
+  const titleInDoneRef = useRef(false);
+  const backRevealedRef = useRef(false);
+  const backReadyRef = useRef(backReady);
   const [clickedNumber, setClickedNumber] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const effectiveActiveId = hoveredId || activeProject;
@@ -181,6 +187,8 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
 
     setClickedNumber(number);
     if (onProjectClick) onProjectClick(id);
+    titleInDoneRef.current = false;
+    backRevealedRef.current = false;
 
     const clickedItem = items.find((item) => item.number === number);
     if (!clickedItem || !clickedTitleContainerRef.current) return;
@@ -243,7 +251,8 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
         force3D: true,
         onComplete: () => {
           if (window.__footerAnimationComplete) window.__footerAnimationComplete();
-          revealBackButton();
+          titleInDoneRef.current = true;
+          if (backReadyRef.current) revealBackButtonOnce();
         },
       },
       ANIM.titleIn.at
@@ -274,8 +283,26 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
     );
   };
 
+  const revealBackButtonOnce = () => {
+    if (backRevealedRef.current) return;
+    backRevealedRef.current = true;
+    revealBackButton();
+  };
+
+  // La galería avisa de que está entera en pantalla después de que el título
+  // haya entrado (el slider se monta al terminar el título).
+  const revealBackRef = useRef(null);
+  useEffect(() => {
+    revealBackRef.current = revealBackButtonOnce;
+  });
+  useEffect(() => {
+    backReadyRef.current = backReady;
+    if (backReady && titleInDoneRef.current) revealBackRef.current?.();
+  }, [backReady]);
+
   // ── Volver al menú ─────────────────────────────────────────
   const handleBack = () => {
+    titleInDoneRef.current = false;
     if (window.__footerBackStarted) window.__footerBackStarted();
 
     const backSplit = splitInstances.current['back-button'];
