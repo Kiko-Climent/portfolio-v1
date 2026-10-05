@@ -133,17 +133,32 @@ export default function ProjectImageSliderMobile({ project, shouldHide = false }
         if (!shouldHide || !splitRef.current?.lines) return;
         const lines = splitRef.current.lines;
         gsap.killTweensOf(lines);
+        const done = () => {
+            // Aunque el bloque sea largo, no queda ni una línea visible antes
+            // de que el menú empiece a entrar.
+            if (textRef.current) textRef.current.style.visibility = 'hidden';
+            window.__mobileInfoHidden?.();
+        };
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (reduceMotion) {
             gsap.set(lines, { yPercent: INFO_ANIM.out.yPercent });
+            done();
             return;
         }
+        // About son muchas líneas: el stagger fijo las dejaría saliendo varios
+        // segundos. Se reparte para que el bloque entero salga en el mismo
+        // tiempo que un texto corto.
+        const stagger = Math.min(
+            INFO_ANIM.out.stagger,
+            0.35 / Math.max(lines.length - 1, 1)
+        );
         gsap.to(lines, {
             yPercent: INFO_ANIM.out.yPercent,
             duration: INFO_ANIM.out.duration,
             ease: INFO_ANIM.out.ease,
-            stagger: INFO_ANIM.out.stagger,
+            stagger,
             force3D: true,
+            onComplete: done,
         });
     }, [shouldHide]);
 

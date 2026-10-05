@@ -638,11 +638,11 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false, isReady = true }) =>
         className="flex top-4 left-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] absolute transition-opacity duration-500"
         style={{ opacity: showNavbarContent ? 1 : 0 }}
       >
-        <div className="flex flex-col gap-y-1">
-          <h1 className="py-1.5">Kiko Climent</h1>
-          <h2 className="py-1.5">Portfolio 2026</h2>
-          <h2 className="py-1.5">Creative Frontend Developer</h2>
-          <div ref={contactRef} className="py-1.5" style={{ display: 'none' }}>
+        <div className="flex flex-col">
+          <h1>Kiko Climent</h1>
+          <h2>Portfolio 2026</h2>
+          <h2>Creative Frontend Developer</h2>
+          <div ref={contactRef} style={{ display: 'none' }}>
             <span ref={contactLabelRef} style={{ color: isDarkMode ? 'white' : 'black' }}>
               contact
             </span>{' '}

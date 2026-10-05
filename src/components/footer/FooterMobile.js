@@ -247,10 +247,20 @@ export default function FooterMobile({ onProjectClick }) {
       delete splitInstances.current['back-button'];
     };
 
-    // About: no hay título ni "back home" en el centro; solo restaurar menú
+    // About: el texto descriptivo ocupa el mismo sitio que el menú. El menú
+    // entra cuando esas líneas ya han salido; si no, se montan unas sobre otras.
     if (!titleSplit && !backSplit) {
       hideCenterUi();
-      restoreMenu();
+      let restored = false;
+      const restore = () => {
+        if (restored) return;
+        restored = true;
+        window.clearTimeout(fallback);
+        if (window.__mobileInfoHidden === restore) delete window.__mobileInfoHidden;
+        restoreMenu();
+      };
+      window.__mobileInfoHidden = restore;
+      const fallback = window.setTimeout(restore, 4000);
       return;
     }
 
@@ -313,20 +323,23 @@ export default function FooterMobile({ onProjectClick }) {
     if (!isAbout && clickedItem && clickedTitleContainerRef.current) {
       clickedTitleContainerRef.current.innerHTML = '';
 
+      const newTitleEl = document.createElement('h1');
+      newTitleEl.className = 'flex';
+      newTitleEl.style.color = isDarkMode ? 'white' : 'black';
+      newTitleEl.style.margin = '0';
+      newTitleEl.textContent = clickedItem.title;
+      clickedTitleContainerRef.current.appendChild(newTitleEl);
+
+      // Fuera de flujo, pegado al borde inferior del título: al mostrarse no
+      // crece el bloque centrado y el título no salta hacia arriba.
       const backButtonEl = document.createElement('div');
-      backButtonEl.className = 'absolute -top-6 left-0 cursor-pointer';
+      backButtonEl.className = 'absolute top-full left-0 cursor-pointer';
       backButtonEl.style.color = isDarkMode ? 'white' : 'black';
       backButtonEl.textContent = 'back home';
       backButtonEl.style.display = 'none';
       backButtonEl.addEventListener('click', () => handleBackRef.current?.());
       clickedTitleContainerRef.current.appendChild(backButtonEl);
       backButtonRef.current = backButtonEl;
-
-      const newTitleEl = document.createElement('h1');
-      newTitleEl.className = 'flex';
-      newTitleEl.style.color = isDarkMode ? 'white' : 'black';
-      newTitleEl.textContent = clickedItem.title;
-      clickedTitleContainerRef.current.appendChild(newTitleEl);
 
       newTitleSplit = splitTitle(newTitleEl);
       splitInstances.current['clicked-title'] = newTitleSplit;
@@ -368,7 +381,7 @@ export default function FooterMobile({ onProjectClick }) {
     <>
       <div
         ref={clickedTitleContainerRef}
-        className="absolute top-1/2 left-4 -translate-y-1/2 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] whitespace-nowrap"
+        className="absolute top-1/2 left-4 -translate-y-1/2 z-50 flex flex-col text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] whitespace-nowrap"
         style={{ display: 'none' }}
       />
 
