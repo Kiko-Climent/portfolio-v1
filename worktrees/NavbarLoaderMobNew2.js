@@ -6,6 +6,7 @@ import { SplitText } from 'gsap/SplitText';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 import RollingCounter from '@/components/mobile/RollingCounter';
 import { PROJECT_NAME } from '@/components/data/grid';
+import { sliderBus } from '@/lib/sliderBus';
 
 gsap.registerPlugin(SplitText);
 
@@ -34,6 +35,62 @@ const CONTACT_ANIM = {
   out: { duration: 0.45, ease: 'power3.in', staggerEach: 0.018, yPercent: -140 },
 };
 const MASK_CUSHION = '0.25em';
+// Cambio de cabecera Home ↔ proyecto: roll simultáneo por carácter.
+const HEADER_ROLL = { duration: 0.7, ease: 'power3.inOut', stagger: 0.018 };
+
+const HOME_LINE2 = 'Portfolio 2026';
+const HOME_LINE3 = 'Creative Frontend Developer';
+const ROLL_LH = 1.08; // em, el interlineado del navbar
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/**
+ * Rodillo por carácter (v3, más limpio): cada línea es UNA máscara de una
+ * línea de alto. El texto viejo y el nuevo se pintan en su sitio natural (sin
+ * huecos ni anchos animados, que es lo que hacía "succionarse" las letras).
+ * La letra i del viejo sube exactamente una línea y sale mientras la letra i
+ * del nuevo sube una línea y entra: mismo instante, misma curva, cascada de
+ * izquierda a derecha. Al terminar, la línea vuelve a ser texto normal.
+ */
+const rollText = (el, from, to, reduce) => {
+  const makeRow = (text) => {
+    const row = document.createElement('span');
+    row.style.cssText = 'display:block;white-space:pre;';
+    const chars = [];
+    for (const ch of text) {
+      const c = document.createElement('span');
+      c.style.cssText = 'display:inline-block;will-change:transform;';
+      c.textContent = ch === ' ' ? ' ' : ch;
+      row.appendChild(c);
+      chars.push(c);
+    }
+    return { row, chars };
+  };
+  el.textContent = '';
+  const mask = document.createElement('span');
+  mask.style.cssText = `display:inline-block;vertical-align:top;position:relative;overflow:hidden;height:${ROLL_LH}em;line-height:${ROLL_LH}em;`;
+  const prev = makeRow(from);
+  const next = makeRow(to);
+  next.row.style.cssText += 'position:absolute;left:0;top:0;';
+  mask.appendChild(prev.row);
+  mask.appendChild(next.row);
+  el.appendChild(mask);
+  mask.style.width = `${Math.max(prev.row.getBoundingClientRect().width, next.row.getBoundingClientRect().width)}px`;
+  gsap.set(next.chars, { yPercent: 100 });
+
+  const duration = reduce ? 0 : HEADER_ROLL.duration;
+  const tl = gsap.timeline({
+    onComplete: () => {
+      el.textContent = to;
+    },
+  });
+  const n = Math.max(prev.chars.length, next.chars.length);
+  for (let i = 0; i < n; i++) {
+    const at = reduce ? 0 : i * HEADER_ROLL.stagger;
+    if (prev.chars[i]) tl.to(prev.chars[i], { yPercent: -100, duration, ease: HEADER_ROLL.ease, force3D: true }, at);
+    if (next.chars[i]) tl.to(next.chars[i], { yPercent: 0, duration, ease: HEADER_ROLL.ease, force3D: true }, at);
+  }
+  return tl;
+};
 
 const renderRollStages = (text, charsRef, stages) => {
   charsRef.current = [];
@@ -565,97 +622,72 @@ const NavbarLoaderMobNew2 = ({ onReady, showContact = false, isReady = true, pro
     });
   }, [isDarkMode]);
 
-  // ── v2: cabecera del detalle (nombre del proyecto + contador) ─────────
-  const homeLine2Ref = useRef(null);
-  const homeLine3Ref = useRef(null);
-  const projectLine2Ref = useRef(null);
-  const projectLine3Ref = useRef(null);
-  const counterInnerRef = useRef(null);
-  const headerSplitsRef = useRef(null);
+  // ── v2: cabecera del detalle — rodillos de tragaperras (rollText) ─────
+  const line2Ref = useRef(null);
+  const line3Ref = useRef(null);
+  const counterWrapRef = useRef(null);
   const headerTlRef = useRef(null);
   const headerInRef = useRef(false);
-  // El nombre se queda pintado mientras sale (project ya es null al volver).
+  const lastCounterRef = useRef('01 / 01');
+  // El proyecto se queda montado mientras la cabecera vuelve a la Home.
   const [shownProject, setShownProject] = useState(null);
-
   // Ajuste de estado al cambiar la prop (patrón de React, sin efecto).
   if (project && project.id !== 'about' && project !== shownProject) setShownProject(project);
+
+  // Número que enseña el contador, para que al volver los rodillos salgan de él.
+  useEffect(
+    () =>
+      sliderBus.on('progress', ({ value, count }) => {
+        if (!count) return;
+        lastCounterRef.current = `${pad2((Math.round(value) % count) + 1)} / ${pad2(count)}`;
+      }),
+    []
+  );
+
+  // Texto inicial de las líneas 2 y 3 (el DOM de esas líneas lo gestionan los rodillos).
+  useEffect(() => {
+    if (line2Ref.current && !line2Ref.current.textContent) line2Ref.current.textContent = HOME_LINE2;
+    if (line3Ref.current && !line3Ref.current.textContent) line3Ref.current.textContent = HOME_LINE3;
+  }, []);
 
   useEffect(() => {
     if (!showNavbarContent) return;
     const entering = !!(project && project.id !== 'about');
     if (entering === headerInRef.current) return;
-    // Al entrar, espera a que el nombre nuevo esté en el DOM.
     if (entering && shownProject?.id !== project.id) return;
     headerInRef.current = entering;
 
-    const home2 = homeLine2Ref.current;
-    const home3 = homeLine3Ref.current;
-    const proj2 = projectLine2Ref.current;
-    const proj3 = projectLine3Ref.current;
-    const counter = counterInnerRef.current;
-    if (!home2 || !home3 || !proj2 || !proj3 || !counter) return;
+    const l2 = line2Ref.current;
+    const l3 = line3Ref.current;
+    const counterWrap = counterWrapRef.current;
+    if (!l2 || !l3 || !counterWrap) return;
 
     headerTlRef.current?.kill();
-    if (headerSplitsRef.current) {
-      headerSplitsRef.current.home.revert();
-      headerSplitsRef.current.project.revert();
-      headerSplitsRef.current = null;
-    }
-    const home = new SplitText([home2, home3], { type: 'chars', mask: 'chars', charsClass: 'char' });
-    const proj = new SplitText(proj2, { type: 'chars', mask: 'chars', charsClass: 'char' });
-    cushionMaskChars([...home.chars, ...proj.chars]);
-    headerSplitsRef.current = { home, project: proj };
-
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const inVars = {
-      yPercent: 0,
-      duration: reduceMotion ? 0 : CONTACT_ANIM.in.duration,
-      ease: CONTACT_ANIM.in.ease,
-      stagger: reduceMotion ? 0 : CONTACT_ANIM.in.staggerEach,
-      force3D: true,
-    };
-    const outVars = {
-      yPercent: CONTACT_ANIM.out.yPercent,
-      duration: reduceMotion ? 0 : CONTACT_ANIM.out.duration,
-      ease: CONTACT_ANIM.out.ease,
-      stagger: reduceMotion ? 0 : CONTACT_ANIM.out.staggerEach,
-      force3D: true,
-    };
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tl = gsap.timeline();
     headerTlRef.current = tl;
 
     if (entering) {
-      gsap.set([proj2, proj3], { visibility: 'visible' });
-      gsap.set(proj.chars, { yPercent: CONTACT_ANIM.in.fromYPercent });
-      gsap.set(counter, { yPercent: CONTACT_ANIM.in.fromYPercent });
-      tl.to(home.chars, outVars, 0);
-      tl.set([home2, home3], { visibility: 'hidden' });
-      tl.to(proj.chars, inVars, 0.25);
-      tl.to(counter, { ...inVars, stagger: 0 }, 0.35);
-    } else {
-      gsap.set([home2, home3], { visibility: 'visible' });
-      gsap.set(home.chars, { yPercent: CONTACT_ANIM.in.fromYPercent });
-      tl.to(proj.chars, outVars, 0);
-      tl.to(counter, { ...outVars, stagger: 0 }, 0);
-      tl.set([proj2, proj3], { visibility: 'hidden' });
-      tl.to(home.chars, inVars, 0.25);
+      const name = PROJECT_NAME[project.id] ?? project.id;
+      const counterText = `01 / ${pad2(project.slider?.images?.length ?? 0)}`;
+      tl.add(rollText(l2, l2.textContent || HOME_LINE2, name, reduce), 0);
+      tl.add(rollText(l3, l3.textContent || HOME_LINE3, counterText, reduce), 0.05);
+      // Cuando el rodillo termina en "01 / 10", el contador vivo ocupa su sitio.
       tl.call(() => {
-        home.revert();
-        proj.revert();
-        headerSplitsRef.current = null;
-        setShownProject(null);
+        l3.textContent = '';
+        gsap.set(counterWrap, { visibility: 'visible' });
       });
+    } else {
+      const fromCounter = lastCounterRef.current;
+      gsap.set(counterWrap, { visibility: 'hidden' });
+      l3.textContent = fromCounter;
+      tl.add(rollText(l2, l2.textContent, HOME_LINE2, reduce), 0);
+      tl.add(rollText(l3, fromCounter, HOME_LINE3, reduce), 0.05);
+      tl.call(() => setShownProject(null));
     }
   }, [project, shownProject, showNavbarContent]);
 
-  useEffect(
-    () => () => {
-      headerTlRef.current?.kill();
-      headerSplitsRef.current?.home.revert();
-      headerSplitsRef.current?.project.revert();
-    },
-    []
-  );
+  useEffect(() => () => headerTlRef.current?.kill(), []);
 
   return (
     <div
@@ -692,7 +724,7 @@ const NavbarLoaderMobNew2 = ({ onReady, showContact = false, isReady = true, pro
             gap-y-1) para que el cuadrado de la fila 2, al girar, no invada
             visualmente la fila 1.
           */}
-          <div className="flex flex-col items-start gap-y-0 text-[length:var(--kc-type-mobile)] font-semibold" style={{ lineHeight: 'var(--kc-leading-mobile-2)' }}>
+          <div className="flex flex-col items-start gap-y-0 text-[length:var(--kc-type-mobile-2)] font-semibold" style={{ lineHeight: 'var(--kc-leading-mobile-2)' }}>
             <div className="flex items-center whitespace-nowrap">
               <h1 ref={titleRef} className="flex" aria-label="Kiko Climent">
                 {renderRollStages('Kiko Climent', titleCharsRef, titleStages)}
@@ -772,26 +804,19 @@ const NavbarLoaderMobNew2 = ({ onReady, showContact = false, isReady = true, pro
           ) : (
             <h1>Kiko Climent</h1>
           )}
-          {/* Línea 2: "Portfolio 2026" ↔ nombre del proyecto */}
-          <div className="relative">
-            <h2 ref={homeLine2Ref}>Portfolio 2026</h2>
-            <h2 ref={projectLine2Ref} className="absolute left-0 top-0 whitespace-nowrap" style={{ visibility: 'hidden' }}>
-              {shownProject ? PROJECT_NAME[shownProject.id] ?? shownProject.id : ''}
-            </h2>
-          </div>
-          {/* Línea 3: "Creative Frontend Developer" ↔ contador rodante */}
-          <div className="relative">
-            <h2 ref={homeLine3Ref}>Creative Frontend Developer</h2>
-            <div
-              ref={projectLine3Ref}
-              className="absolute left-0 top-0 overflow-hidden"
-              style={{ visibility: 'hidden', paddingTop: MASK_CUSHION, paddingBottom: MASK_CUSHION, marginTop: `-${MASK_CUSHION}`, marginBottom: `-${MASK_CUSHION}` }}
-            >
-              <span ref={counterInnerRef} className="inline-block">
-                {shownProject ? <RollingCounter key={shownProject.id} total={shownProject.slider?.images?.length ?? 0} /> : null}
-              </span>
-            </div>
-          </div>
+          {/* Líneas 2 y 3: rodillos de tragaperras carácter a carácter (rollText).
+              Los spans van vacíos a propósito: su contenido lo pone el efecto. */}
+          <h2>
+            <span ref={line2Ref} />
+          </h2>
+          <h2 className="relative">
+            <span ref={line3Ref} className="tabular-nums" />
+            <span ref={counterWrapRef} className="absolute left-0 top-0" style={{ visibility: 'hidden' }}>
+              {shownProject ? (
+                <RollingCounter key={shownProject.id} total={shownProject.slider?.images?.length ?? 0} />
+              ) : null}
+            </span>
+          </h2>
           <div ref={contactRef} style={{ display: 'none', marginTop: '1em' }}>
             {CONTACT_ROWS.map(({ label, value, href }) => (
               <div key={label} className="grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', columnGap: 12 }}>

@@ -837,7 +837,11 @@ export default function SliderThree4Mobile({
                     const inView = isInView(slide, d.currentY);
                     slide.visible = inView && (!d.intro || d.reveal) && !(exiting && !d.textureReady);
                     // El caption aparece cuando la cortina de su hoja ya ha subido.
-                    d.caption.visible = slide.visible && !exiting && d.textureReady && d.curtain.uClip.value.y > 0.6;
+                    // El caption se esconde al cruzar la línea del ancla hacia arriba: si no,
+                    // el de la hoja anterior caería sobre la cabecera (línea 3).
+                    const captionY = d.currentY - d.h / 2 - (MOBILE_GRID.captionGap + MOBILE_GRID.captionLine / 2) * worldPerPx;
+                    d.caption.visible =
+                        slide.visible && !exiting && d.textureReady && d.curtain.uClip.value.y > 0.6 && captionY < anchorWorldY;
 
                     if (!d.textureRequested && Math.abs(d.currentY) < worldH / 2 + 3) {
                         d.textureRequested = true;
