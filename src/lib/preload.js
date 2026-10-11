@@ -35,7 +35,7 @@ const sliderColumnUrls = (project) =>
  * Lo que tiene que estar listo para que la home aparezca completa al acabar la
  * intro (los cuadrados no viajan a la esquina hasta entonces):
  *   - escritorio: las 41 miniaturas de la grid (las mismas URLs que pide
- *     grids/index5) + los chunks de Three.js del hover y del slider
+ *     grids/index5) + el chunk del hover (la ondulación) y el del slider
  *   - móvil: las texturas que el fondo 3D pinta nada más montarse + su chunk
  * Cuando termina, el resto se descarga en segundo plano sin competir con lo crítico.
  * Nunca rechaza: un fallo de red no puede dejar a nadie atrapado en el loader.

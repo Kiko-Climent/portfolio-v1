@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* ── Cuerpo de letra único ─────────────────────────────────────────
+   Todo el texto de la web usa estas variables (navbar, footer, fichas,
+   línea de datos, speed-slider). Para cambiar el tamaño, solo aquí.
+   Antes, en ambos: clamp(1.0625rem, 1.75vw, 1.3125rem) → ~21px a 1440.
+   --kc-square: cuadrado del loader / toggle de modo oscuro (antes 16px fijo,
+   borde 2px). Valor directo: con calc(var(--kc-type) …) el compilador lo perdía. */
+:root {
+  --kc-type: clamp(0.8125rem, 1.04vw, 1rem);                 /* ~15px a 1440 */
+  --kc-type-mobile: clamp(1.0625rem, 1.75vw, 1.3125rem);     /* móvil: sin cambios por ahora */
+  /* Móvil v2 (rejilla de 4 columnas, SliderThree4Mobile): 13 px en pantallas
+     estrechas, 14 px como máximo; interlineado pegado. La de arriba la siguen
+     usando los componentes móviles antiguos. */
+  --kc-type-mobile-2: clamp(0.8125rem, 3.4vw, 0.875rem);
+  --kc-leading-mobile-2: 1.08;
+  --kc-square: clamp(0.6875rem, 0.83vw, 0.8125rem);          /* ~12px a 1440 */
+}
+
 *{
   margin: 0;
   padding: 0;
@@ -9,4 +26,22 @@
 body{
   background-color: white;
   color: black;
+}
+
+/* ── Texto sobre imágenes: mix-blend-mode difference ──────────────
+   Navbar y footer: cuando las hojas del slider pasan por debajo, el texto se
+   invierte y sigue leyéndose. En modo claro el texto es negro, que en
+   difference no se ve sobre blanco: se invierte antes (filter) para que sobre
+   el papel siga negro (#767676 queda #767676) y sobre las fotos se invierta.
+   En oscuro el texto ya es blanco: solo difference. Para quitarlo, borrar
+   este bloque. */
+[data-navbar],
+.kc-blend {
+  mix-blend-mode: difference;
+  filter: invert(1);
+}
+
+html.dark [data-navbar],
+html.dark .kc-blend {
+  filter: none;
 }

@@ -576,7 +576,7 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false, isReady = true }) =>
             gap-y-1) para que el cuadrado de la fila 2, al girar, no invada
             visualmente la fila 1.
           */}
-          <div className="flex flex-col items-start gap-y-2 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1]">
+          <div className="flex flex-col items-start gap-y-2 text-[length:var(--kc-type-mobile)] font-semibold leading-[1]">
             <div className="flex items-center whitespace-nowrap py-1.5">
               <h1 ref={titleRef} className="flex" aria-label="Kiko Climent">
                 {renderRollStages('Kiko Climent', titleCharsRef, titleStages)}
@@ -635,7 +635,7 @@ const NavbarLoaderMobNew = ({ onReady, showContact = false, isReady = true }) =>
       {/* Navbar: layout final idéntico a NavbarMobile.js + 4ª línea de contacto (solo About) */}
       <div
         ref={navbarRef}
-        className="flex top-4 left-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1] absolute transition-opacity duration-500"
+        className="flex top-4 left-4 right-4 z-50 text-[length:var(--kc-type-mobile)] font-semibold leading-[1.1] absolute transition-opacity duration-500"
         style={{ opacity: showNavbarContent ? 1 : 0 }}
       >
         <div className="flex flex-col">

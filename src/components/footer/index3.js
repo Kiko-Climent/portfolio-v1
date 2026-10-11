@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import gsap from 'gsap';
 import { SplitText } from 'gsap/SplitText';
 import { useDarkMode } from '@/contexts/DarkModeContext';
+import { PAGE, columnLeft, columnsWidth } from '@/lib/pageGrid';
 
 // Registrar el plugin SplitText
 gsap.registerPlugin(SplitText);
@@ -68,7 +69,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
     { title: "Salon Vilarnau", number: "02", id: "salon" },
     { title: "Against Low Trends", number: "03", id: "alt" },
     { title: "MM Discos", number: "04", id: "mmdiscos" },
-    { title: "About", number: "Me", id: "about" },
+    { title: "About", number: "05", id: "about" },
   ];
 
   const titleRefs = useRef({});
@@ -87,6 +88,8 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
   const [clickedNumber, setClickedNumber] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const effectiveActiveId = hoveredId || activeProject;
+  const activeIdRef = useRef(effectiveActiveId);
+  activeIdRef.current = effectiveActiveId;
 
   // ── Helpers ────────────────────────────────────────────────
   const applyColor = (chars) => {
@@ -148,6 +151,7 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
           splitInstances.current[`number-${number}`] = splitPlain(numberRefs.current[number]);
         }
       });
+      paintMenuRef.current();
     }, 0);
 
     return () => {
@@ -162,24 +166,37 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
     // las instancias de "back menu" y del título del proyecto activo.
   }, []);
 
-  useEffect(() => {
-    const color = isDarkMode ? 'white' : 'black';
+  const paintMenuRef = useRef(() => {});
+  paintMenuRef.current = () => {
+    const full = isDarkModeRef.current ? '#ffffff' : '#000000';
+    const muted = isDarkModeRef.current ? PAGE.mutedDark : PAGE.muted;
+    const activeId = activeIdRef.current;
 
-    Object.values(splitInstances.current).forEach((split) => {
-      if (!split?.chars) return;
-      split.chars.forEach((char) => {
-        char.style.color = color;
+    items.forEach(({ number, id }) => {
+      const color = activeId && activeId !== id ? muted : full;
+      [`title-${number}`, `number-${number}`].forEach((key) => {
+        splitInstances.current[key]?.chars?.forEach((char) => {
+          char.style.color = color;
+        });
       });
     });
 
-    if (backButtonRef.current) {
-      backButtonRef.current.style.color = color;
-    }
+    ['clicked-title', 'back-button'].forEach((key) => {
+      splitInstances.current[key]?.chars?.forEach((char) => {
+        char.style.color = full;
+      });
+    });
+
+    if (backButtonRef.current) backButtonRef.current.style.color = full;
     if (clickedTitleContainerRef.current) {
       const titleEl = clickedTitleContainerRef.current.querySelector('h1');
-      if (titleEl) titleEl.style.color = color;
+      if (titleEl) titleEl.style.color = full;
     }
-  }, [isDarkMode]);
+  };
+
+  useEffect(() => {
+    paintMenuRef.current();
+  }, [isDarkMode, effectiveActiveId]);
 
   // ── Click sobre un proyecto ────────────────────────────────
   const handleClick = (number, id) => {
@@ -396,10 +413,11 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
 
   return (
     <div
-      className="flex bottom-4 right-4 z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] absolute transition-opacity duration-700"
+      data-footer
+      className="absolute bottom-4 z-50 flex text-[length:var(--kc-type)] leading-[1] transition-opacity duration-700"
       style={{
-        left: '50%',
-        width: 'calc(50% - 1rem)',
+        left: columnLeft(7),
+        width: columnsWidth(6),
         opacity: isVisible ? 1 : 0,
         pointerEvents: isVisible ? 'auto' : 'none',
       }}
@@ -420,9 +438,11 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
         {items.map(({ title, number, id }) => (
           <div
             key={number}
-            className="flex justify-between cursor-pointer transition-colors duration-300 ease-in-out"
+            className="flex cursor-pointer justify-between"
             style={{
-              opacity: effectiveActiveId && effectiveActiveId !== id ? 0.5 : 1,
+              color: effectiveActiveId && effectiveActiveId !== id
+                ? (isDarkMode ? PAGE.mutedDark : PAGE.muted)
+                : (isDarkMode ? '#ffffff' : '#000000'),
             }}
             onMouseEnter={() => {
               if (id && !clickedNumber) {
@@ -438,14 +458,12 @@ export default function Footer3({ activeProject, onHover, onProjectClick, isVisi
             <h1
               ref={(el) => (titleRefs.current[number] = el)}
               className="flex"
-              style={{ color: isDarkMode ? 'white' : 'black' }}
             >
               {title}
             </h1>
             <p
               ref={(el) => (numberRefs.current[number] = el)}
-              className="flex text-right w-[2ch]"
-              style={{ color: isDarkMode ? 'white' : 'black' }}
+              className="flex text-right w-[2ch] tabular-nums"
             >
               {number}
             </p>

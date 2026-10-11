@@ -188,7 +188,7 @@ export default function ProjectImageSliderMobile({ project, shouldHide = false }
             >
                 <div
                     ref={textRef}
-                    className="text-[clamp(1.0625rem,1.75vw,1.3125rem)] font-semibold leading-[1.1]"
+                    className="text-[length:var(--kc-type-mobile)] font-semibold leading-[1.1]"
                     style={{
                         visibility: 'hidden',
                         ...(isAbout

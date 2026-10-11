@@ -136,7 +136,7 @@ export default function HoverImageSlider({ project }) {
     /* ---------------- RENDER ---------------- */
 
     return (
-        <div className="flex absolute w-full h-screen top-0 left-0 pointer-events-none">
+        <div className="pointer-events-none absolute top-0 left-0 z-30 flex h-screen w-full">
             <div className='w-1/2'></div>
             
             <div className="relative w-1/2">

@@ -10,9 +10,14 @@ import { useEffect, useState } from 'react';
  * el chunk ya está, el componente se monta en el mismo render.
  */
 export const loadWaveImage = () => import('@/components/tools/WaveImage');
-export const loadBackgroundMobile = () => import('@/components/backgroundMobile/index');
-export const loadDesktopSlider = () => import('@/components/sliders/ProjectImageSliderThree');
-export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile');
+// Móvil v1: '@/components/backgroundMobile/index' (SliderThree3Mobile, hojas centradas).
+// export const loadBackgroundMobile = () => import('@/components/backgroundMobile/index');
+export const loadBackgroundMobile = () => import('@/components/backgroundMobile/index2');
+// Antes: '@/components/sliders/ProjectImageSliderThree' (slider centrado, sin rejilla).
+export const loadDesktopSlider = () => import('@/components/sliders/ProjectImageSliderThreeGrid');
+// Móvil v1: '@/components/sliders/ProjectImageSliderMobile'.
+// export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile');
+export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile2');
 
 const modules = new Map();
 

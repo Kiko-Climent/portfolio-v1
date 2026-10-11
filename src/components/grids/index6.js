@@ -19,16 +19,10 @@ import { LazyComponent, loadWaveImage } from '@/lib/lazyComponents';
 const COLUMNS = 7;
 
 const LAYOUT = {
-  columnGap: '0.45rem',
-  // Alto del caption (tipo + margen) y aire entre filas. Con esto se calcula
-  // el ancho para que las fotos más altas quepan en las 6 filas.
-  captionBlock: 14,
-  rowGap: 16,
-  maxImageWidth: 68,
-  captionSize: '7px',
+  // Hueco respecto a la línea del navbar y a la del menú.
+  frameGap: 14,
+  captionWeight: 600,
 };
-
-const MAX_ASPECT = Math.max(...images.map((image) => mediaAspect(image.key)));
 
 const REVEAL = {
   delay: 0.2,
@@ -69,6 +63,7 @@ export default function PortfolioGridSix({
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [availableHeight, setAvailableHeight] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [frame, setFrame] = useState(null);
   const [layoutReady, setLayoutReady] = useState(false);
   const [phase, setPhase] = useState('covered');
   const [settled, setSettled] = useState(() => images.map(() => false));
@@ -81,19 +76,29 @@ export default function PortfolioGridSix({
   useEffect(() => {
     const updateHeight = () => {
       const navbar = document.querySelector('[data-navbar]');
-      if (!navbar) {
+      const footer = document.querySelector('[data-footer]');
+      if (!navbar || !footer) {
         return false;
       }
 
-      const navbarHeightValue = navbar.offsetHeight;
-      const topOffset = 16;
-      const bottomOffset = 16;
+      const nav = navbar.getBoundingClientRect();
+      const foot = footer.getBoundingClientRect();
+      const frameTop = nav.bottom + LAYOUT.frameGap;
+      const frameBottom = foot.top - LAYOUT.frameGap;
+      const height = frameBottom - frameTop;
+      // Mitad izquierda: el borde derecho queda antes del centro,
+      // donde entra la foto de detalle.
+      const width = window.innerWidth / 2 - 32;
+      if (width < 80 || height < 80) return false;
 
-      const height =
-        window.innerHeight - navbarHeightValue - topOffset - bottomOffset;
-
-      setAvailableHeight(height);
-      setNavbarHeight(navbarHeightValue);
+      setFrame({
+        top: frameTop,
+        left: 16,
+        width,
+        height,
+      });
+      setAvailableHeight(window.innerHeight - nav.height - 32);
+      setNavbarHeight(nav.height);
       setViewportWidth(window.innerWidth);
       return true;
     };
@@ -120,7 +125,7 @@ export default function PortfolioGridSix({
     return () => window.removeEventListener('resize', updateHeight);
   }, [isVisible]);
 
-  const gridMounted = availableHeight !== null;
+  const gridMounted = frame !== null;
   useLayoutEffect(() => {
     if (!gridMounted) return;
     gsap.set(imageRefs.current.filter(Boolean), HIDDEN);
@@ -245,7 +250,7 @@ export default function PortfolioGridSix({
   const hoveredImageConfig = getHoveredImageConfig();
   const imageDimensions = hoveredImageConfig ? getImageDimensions(hoveredImageConfig) : null;
 
-  if (availableHeight === null) {
+  if (frame === null || availableHeight === null) {
     return (
       <div className="fixed inset-0 flex items-center justify-center text-white">
       </div>
@@ -265,57 +270,64 @@ export default function PortfolioGridSix({
 
   const finalOpacity = isVisible ? 1 : 0;
 
-  const imageWidth = Math.min(
-    LAYOUT.maxImageWidth,
-    (availableHeight - LAYOUT.captionBlock * GRID_ROWS - LAYOUT.rowGap * (GRID_ROWS - 1)) /
-      GRID_ROWS /
-      MAX_ASPECT
-  );
+  const columnGap = frame.width * 0.012;
+  const rowGap = frame.height * 0.018;
+  const cellWidth = (frame.width - (COLUMNS - 1) * columnGap) / COLUMNS;
+  const cellHeight = (frame.height - (GRID_ROWS - 1) * rowGap) / GRID_ROWS;
+  const captionSize = Math.min(13, Math.max(9, Math.min(frame.width, frame.height) * 0.016));
+  const imageMaxH = Math.max(24, cellHeight - captionSize - 6);
+
+  const sizeOf = (aspect) => {
+    if (aspect < 1) {
+      const naturalH = cellWidth * aspect;
+      if (naturalH <= imageMaxH) return { width: '100%' };
+      return { width: `${((imageMaxH / aspect) / cellWidth) * 100}%` };
+    }
+    const width = Math.min(cellWidth, imageMaxH / aspect);
+    return { width: `${(width / cellWidth) * 100}%` };
+  };
 
   return (
     <>
       <div
-        className="absolute left-4 right-4 box-border transition-all duration-700 ease-in-out"
+        className="absolute box-border overflow-hidden"
         style={{
-          top: `${navbarHeight + 16}px`,
-          height: `${availableHeight}px`,
+          top: frame.top,
+          left: '1rem',
+          width: 'calc(50vw - 2rem)',
+          height: frame.height,
           opacity: finalOpacity,
           pointerEvents: (galleryOpen || !isVisible) ? 'none' : 'auto',
         }}
       >
         <div
-          className="h-full content-start"
+          className="h-full w-full"
           style={{
-            width: 'calc(50% - 1rem)',
             display: 'grid',
             gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))`,
-            columnGap: LAYOUT.columnGap,
-            rowGap: `${LAYOUT.rowGap}px`,
+            gridTemplateRows: `repeat(${GRID_ROWS}, minmax(0, 1fr))`,
+            columnGap,
+            rowGap,
           }}
         >
           {images.map((image, index) => {
-            const isProjectActive = activeProject === image.project ||
-                                    (hoveredImage && hoveredImage.project === image.project);
+            const galleryHovered = hoveredImage?.project === image.project;
+            const isProjectActive = activeProject === image.project || galleryHovered;
             const opacity = isProjectActive ? 1 : 0.6;
             const blur = isProjectActive ? 0 : '4px';
 
             const isShown = phase === 'shown';
             const isSettled = isShown || phase === 'hiding' || settled[index];
             const isInteractive = isShown || (phase === 'revealing' && settled[index]);
-            const showCaption = isSettled && phase !== 'hiding' && phase !== 'covered';
+            const showCaption = galleryHovered && phase !== 'hiding' && phase !== 'covered';
             const media = getMedia(image.key);
             const fileName = fileNameOf(image.src);
+            const size = sizeOf(mediaAspect(image.key));
 
             return (
               <div
                 key={index}
-                className={`
-                  flex
-                  w-full
-                  flex-col
-                  items-start
-                  ${isShown ? 'transition-all duration-300' : ''}
-                `}
+                className="flex h-full min-w-0 flex-col items-start"
                 style={{
                   opacity: isSettled ? opacity : 1,
                   pointerEvents: isInteractive ? undefined : 'none',
@@ -334,30 +346,41 @@ export default function PortfolioGridSix({
                   onHover?.(null);
                 }}
               >
-                <img
-                  ref={(el) => {
-                    imageRefs.current[index] = el;
-                  }}
-                  src={sources[index]}
-                  width={media?.w}
-                  height={media?.h}
-                  decoding="async"
-                  alt={fileName}
-                  className="block h-auto max-w-full"
+                {/* Mismo blur que index5: en el marco, recortado, no sobre el <img>. */}
+                <div
+                  className={`
+                    max-w-full
+                    min-w-0
+                    overflow-hidden
+                    ${isShown ? 'transition-all duration-300' : ''}
+                  `}
                   style={{
-                    width: `${imageWidth}px`,
+                    width: size.width,
                     filter: `blur(${isSettled ? blur : 0})`,
-                    transition: phase === 'covered'
-                      ? 'none'
-                      : isShown
-                        ? 'filter 300ms ease-out'
-                        : `filter ${REVEAL.settleDuration}s ease-out`,
+                    ...(!isShown && {
+                      transition: phase === 'covered'
+                        ? 'none'
+                        : `filter ${REVEAL.settleDuration}s ease-out`
+                    })
                   }}
-                />
+                >
+                  <img
+                    ref={(el) => {
+                      imageRefs.current[index] = el;
+                    }}
+                    src={sources[index]}
+                    width={media?.w}
+                    height={media?.h}
+                    decoding="async"
+                    alt={fileName}
+                    className="block h-auto w-full max-w-full object-contain"
+                  />
+                </div>
                 <span
                   className="mt-1 block max-w-full leading-none text-black"
                   style={{
-                    fontSize: LAYOUT.captionSize,
+                    fontSize: captionSize,
+                    fontWeight: LAYOUT.captionWeight,
                     letterSpacing: '0.01em',
                     opacity: showCaption ? 1 : 0,
                     transition: phase === 'covered' ? 'none' : 'opacity 0.35s ease-out',

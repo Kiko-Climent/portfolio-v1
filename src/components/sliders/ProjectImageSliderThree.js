@@ -383,7 +383,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
             <div className="relative z-20 w-1/2 h-full pointer-events-none">
                 <div
                     ref={textRef}
-                    className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] pointer-events-auto"
+                    className="absolute bottom-4 left-4 max-w-[42vw] pr-12 text-[length:var(--kc-type)] leading-[1] pointer-events-auto"
                     style={{ pointerEvents: focusIndex === null ? 'auto' : 'none' }}
                 >
                     {text.url ? (
@@ -412,7 +412,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
 
             <div
                 ref={captionRef}
-                className="absolute bottom-4 left-4 z-20 flex flex-col items-start whitespace-nowrap text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] pointer-events-none"
+                className="absolute bottom-4 left-4 z-20 flex flex-col items-start whitespace-nowrap text-[length:var(--kc-type)] leading-[1] pointer-events-none"
                 style={{ visibility: 'hidden', color: isDarkMode ? 'white' : 'black' }}
             >
                 {[
@@ -433,7 +433,8 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
                                 pointerEvents: focusIndex === null ? 'none' : 'auto',
                             }}
                         >
-                            {captionUrlLabel} {'\u2197\uFE0E'}
+                            {captionUrlLabel}{' '}
+                            <span className="relative top-[0.09em]">{'\u2197\uFE0E'}</span>
                         </a>
                     ) : null,
                 ].filter(Boolean).map((line, i) => (

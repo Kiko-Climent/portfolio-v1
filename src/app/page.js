@@ -1,13 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import Footer3 from '@/components/footer/index3';
-import FooterMobile from '@/components/footer/FooterMobile';
-import PortfolioGridFive from '@/components/grids/index5';
+import { useState, useEffect, useCallback, useRef } from 'react';
+// Footer anterior (el menú sale y entran título + "back menu"): index3.
+// import Footer3 from '@/components/footer/index3';
+import Footer5 from '@/components/footer/index5';
+// Móvil v1 (lista + título centrado + texto abajo): FooterMobile.
+// import FooterMobile from '@/components/footer/FooterMobile';
+import FooterMobile2 from '@/components/footer/FooterMobile2';
+import PortfolioGridSeven from '@/components/grids/index7';
 import { projects } from '@/components/data/projects';
-import HoverImageSlider from '@/components/sliders/index';
+import SpeedSlider, { warmSpeedImages } from '@/components/sliders/SpeedSlider';
 import NavbarLoaderNew5 from '../../worktrees/NavbarLoaderNew5';
-import NavbarLoaderMobNew from '../../worktrees/NavbarLoaderMobNew';
+// Móvil v1: NavbarLoaderMobNew.
+// import NavbarLoaderMobNew from '../../worktrees/NavbarLoaderMobNew';
+import NavbarLoaderMobNew2 from '../../worktrees/NavbarLoaderMobNew2';
 import { preloadForIntro, prefetchProject } from '@/lib/preload';
 import {
   LazyComponent,
@@ -20,6 +26,13 @@ import {
 export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
   const [footerHoveredProject, setFooterHoveredProject] = useState(null);
+  const footerHoveredRef = useRef(null);
+  // Imagen que enseña el speed-slider ahora mismo: la grid mueve su cuadradito a ella.
+  const [speedKey, setSpeedKey] = useState(null);
+  // Cambio directo de proyecto desde el footer: la galería actual sale con su
+  // cortina (sin que el grid de la home vuelva a aparecer) y entra la nueva.
+  const [switchingProject, setSwitchingProject] = useState(false);
+  const switchTimerRef = useRef(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   // El SSR no conoce el ancho real de la pantalla, así que "isMobile" arranca
@@ -44,6 +57,10 @@ export default function Home() {
   // FooterMobile.js) para que el contacto del navbar salga a la vez que
   // saldría el título de un proyecto, no ~1s más tarde.
   const [aboutExiting, setAboutExiting] = useState(false);
+  // Móvil v2: hoja "Info" del detalle (la abre/cierra la barra del footer).
+  const [infoOpen, setInfoOpen] = useState(false);
+  // Móvil v2: la Home cierra sus hojas con la cortina mientras sale el menú.
+  const [mobileLeavingHome, setMobileLeavingHome] = useState(false);
   // Lo imprescindible para que la home aparezca completa (ver preloadForIntro).
   // Mientras sea false, los cuadrados del loader siguen girando en vez de viajar
   // a la esquina.
@@ -133,6 +150,8 @@ export default function Home() {
       setHideSlider(false); // ⭐ RESETEAR
       setAboutExiting(false);
       setSliderReady(false);
+      setInfoOpen(false);
+      setMobileLeavingHome(false);
     }
   }, [clickedProject]);
 
@@ -147,9 +166,7 @@ export default function Home() {
     window.__footerBackStarted = () => {
       setHideSlider(true);
       setAboutExiting(true);
-      // La galería abierta deja de estar activa: el menú y el reveal del grid
-      // vuelven en su estado de reposo.
-      setActiveProject(null);
+      setInfoOpen(false);
     };
 
     return () => {
@@ -158,16 +175,23 @@ export default function Home() {
     };
   }, []);
 
+  // Speed-slider: precarga en reposo las "md" de todas las galerías.
+  useEffect(() => {
+    if (isLoadingComplete && !isMobile) warmSpeedImages();
+  }, [isLoadingComplete, isMobile]);
+
   const selectedProject = clickedProject ? projects[clickedProject] : null;
   const hoveredProject = footerHoveredProject && !clickedProject ? projects[footerHoveredProject] : null;
   const shouldShowMobileBackground = isMobile && isMobileReady && clickedProject === null;
   const isAboutSelected = selectedProject?.id === 'about' && !aboutExiting;
+  // Móvil v2: el navbar cambia "Portfolio 2026 / Creative Frontend Developer"
+  // por el nombre del proyecto y el contador mientras se ve su detalle.
+  const mobileHeaderProject =
+    isMobile && selectedProject && selectedProject.id !== 'about' && !hideSlider ? selectedProject : null;
 
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
       setClickedProject(null);
-      setActiveProject(null);
-      setFooterHoveredProject(null);
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR
       return;
@@ -180,7 +204,9 @@ export default function Home() {
     }
 
     // La galería elegida sigue activa: sus imágenes salen del grid sin blur.
+    // El speed slider del hover se apaga: la galería ocupa ese sitio.
     setActiveProject(projectId);
+    footerHoveredRef.current = null;
     setFooterHoveredProject(null);
 
     // Escritorio: la galería se abre ya, en paralelo a la salida del menú (el
@@ -192,10 +218,29 @@ export default function Home() {
       return;
     }
 
+    setMobileLeavingHome(true);
     setTimeout(() => {
       setClickedProject(projectId);
     }, 600);
   };
+
+  // Tiempo para la cortina de salida de la galería (CURTAIN.out en index5:
+  // 0.6 s + stagger) y la salida por líneas del texto, antes de montar la nueva.
+  const SWITCH_OUT_MS = 950;
+  const handleProjectSwitch = (projectId) => {
+    if (!clickedProject || !projectId || projectId === clickedProject) return;
+    if (projectId !== 'about') prefetchProject(projectId, { size: 'slider', as: 'texture' });
+    setActiveProject(projectId);
+    setSwitchingProject(true);
+    clearTimeout(switchTimerRef.current);
+    switchTimerRef.current = setTimeout(() => {
+      setSliderReady(false);
+      setClickedProject(projectId);
+      setSwitchingProject(false);
+    }, SWITCH_OUT_MS);
+  };
+
+  useEffect(() => () => clearTimeout(switchTimerRef.current), []);
 
   // Callbacks estables: los loaders no deben recibir una función nueva en cada
   // render (antes eso relanzaba su timeline entera con cada hover).
@@ -208,18 +253,19 @@ export default function Home() {
   }, []);
 
   const handleFooterHover = (projectId) => {
-    // Intención de abrir: el flicker del hover necesita las "md" decodificadas y
-    // el slider (que se monta en el mismo click) sus texturas de la columna.
+    footerHoveredRef.current = projectId;
     if (projectId) {
+      // El speed slider pide las "md"; el click, las texturas de la galería.
       prefetchProject(projectId, { size: 'md', as: 'image' });
       if (projectId !== 'about') prefetchProject(projectId, { size: 'slider', as: 'texture' });
     }
-    setActiveProject(projectId);
     setFooterHoveredProject(projectId);
+    setActiveProject(projectId);
   };
 
   const handleGridHover = (projectId) => {
-    setActiveProject(projectId);
+    if (projectId) setActiveProject(projectId);
+    else setActiveProject(footerHoveredRef.current);
   };
 
 
@@ -235,7 +281,12 @@ export default function Home() {
     >
       {hasMounted ? (
         isMobile ? (
-          <NavbarLoaderMobNew onReady={handleMobileReady} showContact={isAboutSelected} isReady={assetsReady} />
+          <NavbarLoaderMobNew2
+            onReady={handleMobileReady}
+            showContact={isAboutSelected}
+            isReady={assetsReady}
+            project={mobileHeaderProject}
+          />
         ) : (
           <NavbarLoaderNew5 onLoadingComplete={handleLoadingComplete} isReady={assetsReady} />
         )
@@ -245,19 +296,20 @@ export default function Home() {
           intro arranca sin esperar a Three.js y preloadForIntro los descarga
           mientras se reproduce. */}
       {shouldShowMobileBackground ? (
-        <LazyComponent loader={loadBackgroundMobile} />
+        <LazyComponent loader={loadBackgroundMobile} hiding={mobileLeavingHome} />
       ) : !isMobile ? (
         <div
           style={{
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
           }}
         >
-          <PortfolioGridFive
+          <PortfolioGridSeven
             activeProject={activeProject}
             clickedProject={clickedProject}
             isReturning={hideSlider}
             isVisible={isLoadingComplete}
             onHover={handleGridHover}
+            speedKey={speedKey}
           />
         </div>
       ) : null}
@@ -270,12 +322,15 @@ export default function Home() {
               loader={loadMobileSlider}
               project={selectedProject}
               shouldHide={hideSlider}
+              infoOpen={infoOpen}
+              onInfoClose={() => setInfoOpen(false)}
             />
           ) : (
             <LazyComponent
+              key={selectedProject.id}
               loader={loadDesktopSlider}
               project={selectedProject}
-              shouldHide={hideSlider}
+              shouldHide={hideSlider || switchingProject}
               onReady={() => setSliderReady(true)}
             />
           )}
@@ -283,23 +338,30 @@ export default function Home() {
       )}
 
       {!isMobile && hoveredProject && isLoadingComplete && (
-        <>
-          <HoverImageSlider project={hoveredProject} />
-        </>
+        <SpeedSlider
+          key={hoveredProject.id}
+          projectId={hoveredProject.id}
+          onImageChange={setSpeedKey}
+        />
       )}
 
       {isMobile && isMobileReady ? (
-        <FooterMobile onProjectClick={handleProjectClick} />
+        <FooterMobile2
+          onProjectClick={handleProjectClick}
+          infoOpen={infoOpen}
+          onInfoToggle={() => setInfoOpen((open) => !open)}
+        />
       ) : !isMobile ? (
         <div
           style={{
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
           }}
         >
-          <Footer3
+          <Footer5
             activeProject={activeProject}
             onHover={handleFooterHover}
             onProjectClick={handleProjectClick}
+            onProjectSwitch={handleProjectSwitch}
             isVisible={isLoadingComplete}
             backReady={sliderReady}
           />

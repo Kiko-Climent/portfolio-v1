@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useDarkMode } from '@/contexts/DarkModeContext';
+import { PAGE } from '@/lib/pageGrid';
 
 // Efecto "roll" tipo johnnycarretes.com, generalizado a N etapas por
 // carácter: cada carácter tiene una fila apilada por etapa (color === null
@@ -416,11 +417,11 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
             subtitleStages / subtitle2Stages): null = oculto, luego negro,
             luego gris — un único acento activo a la vez, estética editorial.
           */}
-          <div className="grid grid-cols-[auto_auto_auto] items-center gap-x-1 gap-y-0 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1]">
+          <div className="grid grid-cols-[auto_auto_auto] items-center gap-x-1 gap-y-0 text-[length:var(--kc-type)] leading-[1]">
             <h1 className="flex whitespace-nowrap" aria-label="Kiko Climent">
               {renderRollStages('Kiko Climent', titleCharsRef, titleStages)}
             </h1>
-            <div ref={squareAnchorRef} className="w-4 h-4" style={{ visibility: 'hidden' }} />
+            <div ref={squareAnchorRef} className="w-[var(--kc-square)] h-[var(--kc-square)]" style={{ visibility: 'hidden' }} />
             <h2 className="flex whitespace-nowrap" aria-label="Creative Frontend Developer">
               {renderRollStages('Creative Frontend Developer', subtitleCharsRef, subtitleStages)}
             </h2>
@@ -428,7 +429,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
             <div />
             <div />
             <div className="flex items-center gap-1">
-              <div ref={square2AnchorRef} className="w-4 h-4" style={{ visibility: 'hidden' }} />
+              <div ref={square2AnchorRef} className="w-[var(--kc-square)] h-[var(--kc-square)]" style={{ visibility: 'hidden' }} />
               <h3 className="flex whitespace-nowrap" aria-label="Portfolio 2026">
                 {renderRollStages('Portfolio 2026', subtitle2CharsRef, subtitle2Stages)}
               </h3>
@@ -448,7 +449,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
         onClick={!showLoader ? toggleDarkMode : undefined}
         onMouseEnter={() => !showLoader && setIsHovered(true)}
         onMouseLeave={() => !showLoader && setIsHovered(false)}
-        className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60]`}
+        className={`fixed w-[var(--kc-square)] h-[var(--kc-square)] border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60]`}
         style={{
           opacity: 0,
           transform: `translate(-50%, -50%) rotate(${isHovered ? '180deg' : '0deg'})`,
@@ -467,7 +468,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
           evitar el flash en la esquina antes de que el useEffect le fije top/left. */}
       <div
         ref={square2Ref}
-        className={`fixed w-4 h-4 border-2 ${isDarkMode ? 'border-white' : 'border-black'} z-[60] pointer-events-none`}
+        className={`fixed w-[var(--kc-square)] h-[var(--kc-square)] border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} z-[60] pointer-events-none`}
         style={{ opacity: 0, backgroundColor: isDarkMode ? 'white' : 'black', transform: 'translate(-50%, -50%)' }}
       />
 
@@ -475,14 +476,21 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
       <div
         ref={navbarRef}
         data-navbar
-        className="flex top-4 left-4 right-4  z-50 text-[clamp(1.0625rem,1.75vw,1.3125rem)] leading-[1] absolute transition-opacity duration-500"
-        style={{ opacity: showNavbarContent ? 1 : 0 }}
+        className="absolute z-50 grid text-[length:var(--kc-type)] leading-[1] transition-opacity duration-500"
+        style={{
+          top: PAGE.pad,
+          left: PAGE.pad,
+          right: PAGE.pad,
+          opacity: showNavbarContent ? 1 : 0,
+          gridTemplateColumns: `repeat(${PAGE.columns}, minmax(0, 1fr))`,
+          columnGap: PAGE.gap,
+        }}
       >
-        <div className="w-1/2 flex flex-col">
+        <div className="flex flex-col" style={{ gridColumn: '1 / span 6' }}>
           <h1>Kiko Climent</h1>
           <h2>Portfolio 2026</h2>
         </div>
-        <div className="w-1/2 flex flex-col">
+        <div className="flex flex-col" style={{ gridColumn: '7 / span 5' }}>
           <p>Creative Frontend Developer</p>
           <p>climent.kiko@gmail.com</p>
           <p>(+49) 176 58260660</p>
