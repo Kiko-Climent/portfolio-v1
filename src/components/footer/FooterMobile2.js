@@ -345,17 +345,28 @@ export default function FooterMobile2({ onProjectClick, infoOpen = false, onInfo
           {items.map(({ title, number, id }) => (
             <div
               key={number}
-              className="flex w-full justify-between items-center cursor-pointer"
-              style={{ height: ROW_H }}
+              className="flex w-full justify-between items-start cursor-pointer"
+              style={{ height: 'var(--kc-index-row)' }}
               onClick={() => handleClick(number, id || number)}
             >
-              <h1 ref={(el) => (titleRefs.current[number] = el)} className="flex text-left" style={{ color: isDarkMode ? 'white' : 'black' }}>
+              {/* Título a tamaño índice (globals.css → --kc-index-mobile-2), interlineado 1,0. */}
+              <h1
+                ref={(el) => (titleRefs.current[number] = el)}
+                className="flex text-left"
+                style={{
+                  color: isDarkMode ? 'white' : 'black',
+                  fontSize: 'var(--kc-index-mobile-2)',
+                  lineHeight: 1,
+                  letterSpacing: '-0.025em',
+                }}
+              >
                 {title}
               </h1>
+              {/* Número al tamaño de texto, colgado arriba a la derecha. */}
               <p
                 ref={(el) => (numberRefs.current[number] = el)}
                 className="flex justify-end w-[2ch] tabular-nums"
-                style={{ color: isDarkMode ? 'white' : 'black' }}
+                style={{ color: isDarkMode ? 'white' : 'black', paddingTop: '0.15em' }}
               >
                 {number}
               </p>

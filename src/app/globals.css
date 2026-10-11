@@ -14,6 +14,14 @@
      usando los componentes móviles antiguos. */
   --kc-type-mobile-2: clamp(0.8125rem, 3.4vw, 0.875rem);
   --kc-leading-mobile-2: 1.08;
+  /* Índice de proyectos (Home móvil): la única excepción al tipo único, y sale
+     de una regla, no de un número suelto:
+       · escala de cuarta justa, dos pasos: texto × (4/3)² ≈ × 1,778 → 23–25 px
+       · con interlineado 1,0, cada fila mide un rowGap de la rejilla móvil
+         (24 px), que es también el mínimo táctil de WCAG 2.5.8.
+     La fila nunca baja de 24 px aunque la letra quede en 23 (--kc-index-row). */
+  --kc-index-mobile-2: calc(var(--kc-type-mobile-2) * 1.7778);
+  --kc-index-row: max(24px, var(--kc-index-mobile-2));
   --kc-square: clamp(0.6875rem, 0.83vw, 0.8125rem);          /* ~12px a 1440 */
 }
 
