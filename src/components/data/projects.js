@@ -1,3 +1,5 @@
+import aboutSheet from './aboutSheet.json';
+
 export const projects = {
     salon: {
       id: 'salon',
@@ -188,7 +190,22 @@ export const projects = {
         images: [
           { id: 1, width: '40%' },
         ]
-      }
+      },
+      // About v2 (contact sheet). La v1 usa slider.images + slider.text.description.
+      bio: [
+        'Full-stack web developer focused on the front-end, blending code and creativity to craft immersive digital experiences. As a creative coder, I love pushing interfaces through motion, interaction, and 3D, working mainly with GSAP, Three.js, and WebGL.',
+        'I\'m part of AllThatJazz, a graphic and digital creation atelier, where I explore experimental design and creative development.',
+        'When I\'m not coding, you\'ll find me following football or basketball, listening to music, or diving into sci-fi films. My work is heavily inspired by brutalism, minimalism, Asian culture, and the raw aesthetics of the 90s.',
+      ],
+      services: ['Creative development', 'Motion & interaction', 'Interactive 3D', 'Editorial websites'],
+      sheet: {
+        caption: 'Berlin, 2026',
+        // Fotograma que se ve ampliado al entrar (1–12).
+        defaultFrame: 4,
+        // Recortes 3:4 del mismo negativo: src/components/data/aboutSheet.json.
+        // Las imágenes se generan con scripts/about-sheet.mjs.
+        frames: aboutSheet.frames,
+      },
     }
   };
   

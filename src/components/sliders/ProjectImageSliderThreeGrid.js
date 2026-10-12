@@ -10,6 +10,13 @@ import SliderThree4, { CURTAIN, GRID_FIT } from '../SliderThree/index5';
 import { mediaAspect, mediaKey, mediaSrc } from '@/lib/media';
 import { PAGE, columnsWidthPx } from '@/lib/pageGrid';
 import { PROJECT_NAME, gridFileName } from '@/components/data/grid';
+import AboutContactSheet from '@/components/about/AboutContactSheet';
+
+// About de escritorio:
+//   'contact-sheet' → v2 (oct 2026): tira de 12 recortes + ampliada + servicios.
+//   'stack'         → v1: la foto 3 veces en vertical + bio abajo a la izquierda.
+// Para volver a la v1 basta con cambiar este valor.
+const ABOUT_LAYOUT = 'contact-sheet';
 
 gsap.registerPlugin(SplitText);
 
@@ -458,6 +465,22 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
         }
         return null;
     };
+
+    if (isAbout && ABOUT_LAYOUT === 'contact-sheet') {
+        return (
+            <div
+                className="fixed top-0 left-0 w-full h-screen z-10 transition-opacity pointer-events-none"
+                style={{ opacity: isVisible ? 1 : 0, transitionDuration: '0.8s' }}
+            >
+                <AboutContactSheet
+                    project={project}
+                    shouldHide={shouldHide}
+                    onSceneReady={handleSceneReady}
+                    onTextReady={() => markReady('text')}
+                />
+            </div>
+        );
+    }
 
     return (
         <div
