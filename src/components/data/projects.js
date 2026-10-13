@@ -197,7 +197,27 @@ export const projects = {
         'I\'m part of AllThatJazz, a graphic and digital creation atelier, where I explore experimental design and creative development.',
         'When I\'m not coding, you\'ll find me following football or basketball, listening to music, or diving into sci-fi films. My work is heavily inspired by brutalism, minimalism, Asian culture, and the raw aesthetics of the 90s.',
       ],
-      services: ['Creative development', 'Motion & interaction', 'Interactive 3D', 'Editorial websites'],
+      services: ['Creative development', 'Interactive 2D & 3D', 'Motion design', 'Editorial websites'],
+      // About v3 (grid cut).
+      gridCut: {
+        // Columnas que ocupa la foto (una tira por columna) y dónde empieza.
+        columns: 4,
+        startColumn: 9,
+        // Alto / ancho de la foto (sin pasar del footer).
+        ratio: 1.25,
+        // Zona útil de about.png [x0, y0, x1, y1] (y desde arriba): fuera los
+        // puntitos del carrusel de Instagram de abajo.
+        crop: [0, 0, 1, 0.965],
+        // Encuadre vertical del cover: -1 arriba, 0 centro, 1 abajo.
+        focus: -0.6,
+        // Tiras separadas (px pensados para una foto de 573 de alto):
+        // grosor de cada una (fracción de su columna; respira ±18 %),
+        // margen arriba/abajo de su forma y desplazamiento de su contenido.
+        widths: [0.42, 0.72, 0.52, 0.66],
+        tops: [34, 0, 72, 16],
+        bottoms: [12, 58, 0, 40],
+        offsets: [18, -26, 34, -12],
+      },
       sheet: {
         caption: 'Berlin, 2026',
         // Fotograma que se ve ampliado al entrar (1–12).

@@ -11,12 +11,14 @@ import { mediaAspect, mediaKey, mediaSrc } from '@/lib/media';
 import { PAGE, columnsWidthPx } from '@/lib/pageGrid';
 import { PROJECT_NAME, gridFileName } from '@/components/data/grid';
 import AboutContactSheet from '@/components/about/AboutContactSheet';
+import AboutGridCut from '@/components/about/AboutGridCut';
 
 // About de escritorio:
+//   'grid-cut'      → v3 (oct 2026): la foto cortada por las cols 7–12, se recompone al hover (WebGL).
 //   'contact-sheet' → v2 (oct 2026): tira de 12 recortes + ampliada + servicios.
 //   'stack'         → v1: la foto 3 veces en vertical + bio abajo a la izquierda.
-// Para volver a la v1 basta con cambiar este valor.
-const ABOUT_LAYOUT = 'contact-sheet';
+// Para volver a una versión anterior basta con cambiar este valor.
+const ABOUT_LAYOUT = 'grid-cut';
 
 gsap.registerPlugin(SplitText);
 
@@ -466,13 +468,14 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
         return null;
     };
 
-    if (isAbout && ABOUT_LAYOUT === 'contact-sheet') {
+    if (isAbout && ABOUT_LAYOUT !== 'stack') {
+        const AboutLayout = ABOUT_LAYOUT === 'grid-cut' ? AboutGridCut : AboutContactSheet;
         return (
             <div
                 className="fixed top-0 left-0 w-full h-screen z-10 transition-opacity pointer-events-none"
                 style={{ opacity: isVisible ? 1 : 0, transitionDuration: '0.8s' }}
             >
-                <AboutContactSheet
+                <AboutLayout
                     project={project}
                     shouldHide={shouldHide}
                     onSceneReady={handleSceneReady}

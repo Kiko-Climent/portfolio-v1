@@ -490,7 +490,7 @@ export default function AboutContactSheet({ project, shouldHide = false, onScene
         <Line lineRef={addLine} style={{ color: mutedInk }}>
           Services
         </Line>
-        <ul className="m-0 list-none p-0" style={{ fontSize: SERVICES_TYPE, lineHeight: 0.98, letterSpacing: '-0.035em' }}>
+        <ul className="m-0 list-none p-0" style={{ fontSize: SERVICES_TYPE, lineHeight: 0.94, letterSpacing: '-0.035em' }}>
           {services.map((service) => (
             <li key={service}>
               <Line lineRef={addLine}>{service}</Line>
