@@ -14,6 +14,7 @@ import AboutContactSheet from '@/components/about/AboutContactSheet';
 import AboutGridCut from '@/components/about/AboutGridCut';
 import AboutPaper from '@/components/about/AboutPaper';
 import AboutFold from '@/components/about/AboutFold';
+import { aboutHandoff } from '@/lib/aboutHandoff';
 
 // About de escritorio:
 //   'fold'          → v5 (oct 2026): la foto entera con las esquinas plegadas; al hover se despliega y ondea (WebGL).
@@ -105,6 +106,8 @@ const READY_FALLBACK_MS = 5000;
 export default function ProjectImageSliderThree({ project, shouldHide = false, onReady }) {
     const { isDarkMode } = useDarkMode();
     const [isVisible, setIsVisible] = useState(false);
+    // Desde el hover del About la foto ya está en pantalla: sin fundido.
+    const [fromHover] = useState(() => project?.id === 'about' && aboutHandoff.isArmed());
     const [focusIndex, setFocusIndex] = useState(null);
     // Imagen que muestra el caption: va un paso por detrás de focusIndex, cambia
     // cuando las líneas ya han salido. Objeto nuevo en cada cambio para que la
@@ -482,7 +485,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
         return (
             <div
                 className="fixed top-0 left-0 w-full h-screen z-10 transition-opacity pointer-events-none"
-                style={{ opacity: isVisible ? 1 : 0, transitionDuration: '0.8s' }}
+                style={{ opacity: isVisible || fromHover ? 1 : 0, transitionDuration: fromHover ? '0s' : '0.8s' }}
             >
                 <AboutLayout
                     project={project}

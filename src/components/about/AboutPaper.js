@@ -9,6 +9,7 @@ import { loadTextureSource, mediaKey, mediaSrc } from '@/lib/media';
 import { createTexture, destroyRenderer } from '@/lib/textures';
 import { PAGE, columnLeft, columnsWidth, columnsWidthPx } from '@/lib/pageGrid';
 import { gridFileName } from '@/components/data/grid';
+import { aboutHandoff, gridExit } from '@/lib/aboutHandoff';
 import { Line, useLineReveal } from './useLineReveal';
 
 /**
@@ -28,6 +29,10 @@ import { Line, useLineReveal } from './useLineReveal';
  * velocidad del retal: se curva mientras se mueve y se queda plano al
  * llegar. Empieza el retal más cercano al cursor y le siguen los demás. En
  * reposo son rectángulos secos.
+ *
+ * Desde el hover del About en el home (src/lib/aboutHandoff.js) no hay
+ * cortina: los retales arrancan unidos, en el mismo sitio y con el mismo
+ * encuadre que la foto del hover, y se separan (PAPER.handoff).
  *
  * La imagen va pegada al papel (se deforma con la hoja). Cortina de entrada
  * y salida: la misma CURTAIN del slider, por retal. Sin WebGL, la foto se
@@ -59,9 +64,14 @@ import { Line, useLineReveal } from './useLineReveal';
  *  fov       apertura de la cámara (más = más perspectiva)
  *  reshuffle al separarse, retales nuevos al azar (la primera vez, los de
  *            projects.js): un ancho de cada tipo (fracción de la subcolumna) y
- *            un alto de cada tipo (px para 573 de alto), repartidos al azar
+ *            un alto de cada tipo (px para 573 de alto), repartidos al azar.
+ *            overlap: probabilidad de que un retal invada la subcolumna
+ *            vecina y cuánto como máximo (fracción de la subcolumna); el que
+ *            está más cerca tapa al de detrás
  *  segments  subdivisión de cada hoja (x, y)
  *  subGap    hueco entre las subcolumnas de una columna (fracción del gutter)
+ *  handoff   al entrar desde el hover: espera, duración y easing de la
+ *            separación (escalonada de izquierda a derecha)
  *  depth3d   cada retal en su plano, como las hojas del slider: profundidad
  *            en reposo de cada uno (px para 573 de alto; negativo = al
  *            fondo), cuánto pasan por delante al unirse (bump), paralaje
@@ -87,6 +97,7 @@ const PAPER = {
   fov: 33,
   segments: [12, 40],
   subGap: 0.5,
+  handoff: { delay: 0.2, duration: 1.2, ease: 'power3.inOut' },
   depth3d: {
     rest: [-90, 40, -200, -30],
     bump: 60,
@@ -99,6 +110,7 @@ const PAPER = {
     enabled: true,
     widths: [[0.5, 0.62], [0.66, 0.78], [0.82, 0.92], [1, 1]],
     heights: [[330, 380], [400, 450], [460, 510], [520, 573]],
+    overlap: { chance: 0.4, reach: 0.4 },
   },
 };
 // Retales por defecto (07a, sin subcolumnas): por columna, [x, ancho] en
@@ -134,8 +146,21 @@ const randomStrips = (n) => {
     const r = Math.random();
     const top = r < 0.3 ? 0 : r < 0.55 ? free : Math.round(Math.random() * free);
     const align = Math.floor(Math.random() * 3);
-    const fx = fw >= 1 ? 0 : align === 0 ? 0 : align === 1 ? 1 - fw : Math.random() * (1 - fw);
-    return [fx, fw, top, h];
+    let fx = fw >= 1 ? 0 : align === 0 ? 0 : align === 1 ? 1 - fw : Math.random() * (1 - fw);
+    let w = fw;
+    // Solapamiento: a veces invade la subcolumna vecina (nunca se sale de la foto).
+    const { chance, reach } = PAPER.reshuffle.overlap;
+    if (Math.random() < chance) {
+      const extra = reach * (0.5 + Math.random() * 0.5);
+      const toLeft = i > 0 && (i === n - 1 || Math.random() < 0.5);
+      if (toLeft) {
+        fx = Math.min(fx, 0) - extra;
+        w = fw + extra;
+      } else if (i < n - 1) {
+        w = Math.max(fx + fw, 1) - fx + extra;
+      }
+    }
+    return [fx, w, top, h];
   });
 };
 // Profundidades al azar: una de cada tipo y, a veces, una muy al fondo.
@@ -328,6 +353,11 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
     holder.appendChild(renderer.domElement);
 
     const crop = gridCut.crop || [0, 0, 1, 1];
+    // Desde el hover del About: arranca con la foto entera (sin cortina).
+    // No se consume aquí (en desarrollo el efecto se monta dos veces): se
+    // consume al soltar la tarjeta.
+    const fromHover = aboutHandoff.isArmed();
+    let pendingHandoff = false;
     let cuts = project.paper?.strips || DEFAULT_STRIPS;
     const split = project.paper?.split || 1;
     let depths = [...PAPER.depth3d.rest];
@@ -378,7 +408,20 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.frustumCulled = false;
       scene.add(mesh);
-      return { mesh, material, uniforms, p: 0, prev: 0, fold: 0, lag: 0, dir: 1, reveal: 0, hide: 0, zoom: CURTAIN.zoomFrom };
+      const p0 = fromHover ? 1 : 0;
+      return {
+        mesh,
+        material,
+        uniforms,
+        p: p0,
+        prev: p0,
+        fold: 0,
+        lag: 0,
+        dir: 1,
+        reveal: fromHover ? 1 : 0,
+        hide: 0,
+        zoom: fromHover ? 1 : CURTAIN.zoomFrom,
+      };
     });
 
     // Rectángulos de cada retal (px de la foto): cortado y entero.
@@ -486,6 +529,10 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       if (dirty && texture) {
         renderer.render(scene, camera);
         dirty = false;
+        if (pendingHandoff) {
+          pendingHandoff = false;
+          startHandoff();
+        }
       }
     };
     gsap.ticker.add(tick);
@@ -539,6 +586,32 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       });
     };
 
+    // Relevo: la foto entera ya está pintada donde estaba la del hover. La
+    // tarjeta se va y los retales se separan, de izquierda a derecha.
+    let cancelGrid = () => {};
+    const startHandoff = () => {
+      requestAnimationFrame(() => aboutHandoff.release());
+      // La foto entera espera quieta a que el grid acabe de taparse; luego los
+      // retales se separan y entran los textos.
+      cancelGrid = gridExit.after(splitFromHover);
+    };
+    const splitFromHover = () => {
+      state.ready = true;
+      state.active = false;
+      wholeRef.current = false;
+      onSceneReady?.();
+      reveal();
+      strips.forEach((s, i) => {
+        gsap.to(s, {
+          p: 0,
+          duration: still ? 0.01 : PAPER.handoff.duration,
+          ease: PAPER.handoff.ease,
+          delay: still ? 0 : PAPER.handoff.delay + i * PAPER.stagger,
+          overwrite: 'auto',
+        });
+      });
+    };
+
     let cancelled = false;
     const mountedAt = performance.now();
     loadTextureSource(src).then(
@@ -553,6 +626,11 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
         shared.uTexSize.value.set(source.image.width, source.image.height);
         dirty = true;
 
+        // Desde el hover: sin cortina; en cuanto se pinte la foto entera, relevo.
+        if (fromHover) {
+          pendingHandoff = true;
+          return;
+        }
         // Cortina de entrada: igual que las hojas del slider, de izquierda a derecha.
         const delay = Math.max(0, CURTAIN.minDelay - (performance.now() - mountedAt) / 1000);
         gsap.to(strips, { reveal: 1, zoom: 1, delay, duration: CURTAIN.duration, ease: CURTAIN.ease, stagger: CURTAIN.stagger });
@@ -560,7 +638,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
           if (cancelled) return;
           state.ready = true;
           onSceneReady?.();
-          reveal();
+          // Los textos, cuando el grid ya se ha tapado.
+          cancelGrid = gridExit.after(reveal);
         });
       },
       () => {
@@ -596,6 +675,7 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
 
     return () => {
       cancelled = true;
+      cancelGrid();
       window.removeEventListener('pointermove', onWindowMove);
       document.removeEventListener('pointerout', onWindowOut);
       gsap.ticker.remove(tick);

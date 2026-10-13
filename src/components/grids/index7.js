@@ -1,5 +1,6 @@
 'use client';
 
+import { gridExit } from '@/lib/aboutHandoff';
 import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import gsap from 'gsap';
 import {
@@ -249,9 +250,12 @@ export default function PortfolioGridSeven({
       });
     } else {
       const delayOf = gsap.utils.distribute({ each: REVEAL.out.each, from: REVEAL.wave.from, grid });
+      // El About espera a que el grid acabe de taparse (src/lib/aboutHandoff.js).
+      gridExit.start();
       tl = gsap.timeline({
         onStart: () => setPhase('hiding'),
         onComplete: () => {
+          gridExit.end();
           coveredRef.current = true;
           setSettled(images.map(() => false));
           setPhase('covered');
@@ -272,7 +276,10 @@ export default function PortfolioGridSeven({
       });
     }
 
-    return () => tl.kill();
+    return () => {
+      tl.kill();
+      gridExit.end();
+    };
   }, [shouldShow, isVisible, layoutReady, settle]);
 
   if (frame === null) {

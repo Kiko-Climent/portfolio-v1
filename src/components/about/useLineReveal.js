@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { SplitText } from 'gsap/SplitText';
 
@@ -57,8 +57,24 @@ export function useLineReveal({ rootRef, parallelRef, onDone }) {
     onDoneRef.current = onDone;
   }, [onDone]);
 
+  // Cada línea nace ya escondida (antes de pintarse): si no, se veía el texto
+  // entero un instante hasta que el efecto de abajo las bajaba (se notaba al
+  // entrar al About desde el hover, que no tiene fundido).
   const addLine = useCallback((el) => {
-    if (el) linesRef.current.add(el);
+    if (!el || linesRef.current.has(el)) return;
+    linesRef.current.add(el);
+    if (!orderedRef.current) gsap.set(el, { yPercent: INFO_ANIM.fromYPercent });
+  }, []);
+
+  // Los párrafos que se parten en líneas (data-split) quedan invisibles hasta
+  // que SplitText los parte y sus líneas bajan.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.querySelectorAll('[data-split]').forEach((cell) => {
+      cell.style.visibility = 'hidden';
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const play = useCallback(() => {
@@ -108,6 +124,9 @@ export function useLineReveal({ rootRef, parallelRef, onDone }) {
       orderedRef.current = lines;
 
       gsap.set(lines, { yPercent: INFO_ANIM.fromYPercent });
+      root.querySelectorAll('[data-split]').forEach((cell) => {
+        cell.style.visibility = '';
+      });
       if (wantRevealRef.current) play();
     }, 60);
 

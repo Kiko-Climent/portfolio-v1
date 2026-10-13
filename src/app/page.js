@@ -10,6 +10,7 @@ import FooterMobile2 from '@/components/footer/FooterMobile2';
 import PortfolioGridSeven from '@/components/grids/index7';
 import { projects } from '@/components/data/projects';
 import SpeedSlider, { warmSpeedImages } from '@/components/sliders/SpeedSlider';
+import { aboutHandoff } from '@/lib/aboutHandoff';
 import NavbarLoaderNew5 from '../../worktrees/NavbarLoaderNew5';
 // Móvil v1: NavbarLoaderMobNew.
 // import NavbarLoaderMobNew from '../../worktrees/NavbarLoaderMobNew';
@@ -26,6 +27,9 @@ import {
 export default function Home() {
   const [activeProject, setActiveProject] = useState(null);
   const [footerHoveredProject, setFooterHoveredProject] = useState(null);
+  // Relevo de la foto del About: la tarjeta del hover se queda hasta que el
+  // About pinta la misma foto (src/lib/aboutHandoff.js).
+  const [holdAboutCard, setHoldAboutCard] = useState(false);
   const footerHoveredRef = useRef(null);
   // Imagen que enseña el speed-slider ahora mismo: la grid mueve su cuadradito a ella.
   const [speedKey, setSpeedKey] = useState(null);
@@ -175,6 +179,29 @@ export default function Home() {
     };
   }, []);
 
+  // Lo que tardan en salir las líneas de la tarjeta del About (INFO_ANIM.out).
+  const ABOUT_CARD_OUT_MS = 800;
+  // Relevo del About: se suelta la tarjeta cuando el About ya pinta la foto
+  // (o a los 3 s, por si algo falla).
+  useEffect(() => {
+    if (!holdAboutCard) return undefined;
+    // Al soltarla, la tarjeta esconde su foto (el About ya la pinta) y se
+    // desmonta cuando sus líneas han terminado de salir.
+    let leave = null;
+    const off = aboutHandoff.onRelease(() => {
+      leave = setTimeout(() => setHoldAboutCard(false), ABOUT_CARD_OUT_MS);
+    });
+    const timer = setTimeout(() => {
+      aboutHandoff.cancel();
+      setHoldAboutCard(false);
+    }, 3000);
+    return () => {
+      off();
+      clearTimeout(timer);
+      clearTimeout(leave);
+    };
+  }, [holdAboutCard]);
+
   // Speed-slider: precarga en reposo las "md" de todas las galerías.
   useEffect(() => {
     if (isLoadingComplete && !isMobile) warmSpeedImages();
@@ -205,6 +232,11 @@ export default function Home() {
 
     // La galería elegida sigue activa: sus imágenes salen del grid sin blur.
     // El speed slider del hover se apaga: la galería ocupa ese sitio.
+    // Desde el hover del About: su foto se convierte en los retales.
+    if (projectId === 'about' && !isMobile && footerHoveredRef.current === 'about') {
+      aboutHandoff.arm();
+      setHoldAboutCard(true);
+    }
     setActiveProject(projectId);
     footerHoveredRef.current = null;
     setFooterHoveredProject(null);
@@ -337,11 +369,12 @@ export default function Home() {
         </>
       )}
 
-      {!isMobile && hoveredProject && isLoadingComplete && (
+      {!isMobile && (hoveredProject || holdAboutCard) && isLoadingComplete && (
         <SpeedSlider
-          key={hoveredProject.id}
-          projectId={hoveredProject.id}
+          key={holdAboutCard ? 'about' : hoveredProject.id}
+          projectId={holdAboutCard ? 'about' : hoveredProject.id}
           onImageChange={setSpeedKey}
+          handoff={holdAboutCard}
         />
       )}
 

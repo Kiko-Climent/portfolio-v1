@@ -9,6 +9,7 @@ import { mediaAspect, mediaKey, mediaSrc } from '@/lib/media';
 import { PAGE, columnLeft, columnsWidth, columnsWidthPx } from '@/lib/pageGrid';
 import { CURTAIN } from '@/components/SliderThree/index5';
 import { INFO_ANIM, Line } from '@/components/about/useLineReveal';
+import { aboutHandoff } from '@/lib/aboutHandoff';
 
 /**
  * ───────────────────────────────────────────────────────────────
@@ -263,13 +264,14 @@ const ABOUT_CARD = {
   textColumn: 2,  // columna de los servicios dentro de la caja (0 = col 7 → 2 = col 9)
 };
 
-function AboutCardPreview({ onImageChange }) {
+function AboutCardPreview({ onImageChange, handoff = false }) {
   const { isDarkMode } = useDarkMode();
   const reduced = usePrefersReducedMotion();
   const [frame, setFrame] = useState(null);
   const sheetRef = useRef(null);
   const imgRef = useRef(null);
   const linesRef = useRef([]);
+  const metaRef = useRef(null);
 
   const project = projects.about;
   const image = imagesOf('about')[0];
@@ -325,6 +327,27 @@ function AboutCardPreview({ onImageChange }) {
     return () => ctx.revert();
   }, [ready, reduced]);
 
+  /* Relevo al About: las líneas salen; la foto se queda hasta que el About la pinta. */
+  useEffect(() => {
+    if (!handoff) return undefined;
+    const lines = linesRef.current.filter(Boolean);
+    gsap.to(lines, {
+      yPercent: INFO_ANIM.out.yPercent,
+      duration: INFO_ANIM.out.duration,
+      ease: INFO_ANIM.out.ease,
+      stagger: INFO_ANIM.out.stagger,
+      overwrite: true,
+    });
+    if (metaRef.current) {
+      gsap.to(metaRef.current, { opacity: 0, duration: INFO_ANIM.out.duration, ease: INFO_ANIM.out.ease });
+    }
+    // El About ya pinta la misma foto debajo: la de la tarjeta se va ya,
+    // las líneas terminan de salir.
+    return aboutHandoff.onRelease(() => {
+      if (sheetRef.current) sheetRef.current.style.visibility = 'hidden';
+    });
+  }, [handoff]);
+
   if (!frame || !image) return null;
 
   const ink = isDarkMode ? '#ffffff' : '#000000';
@@ -335,7 +358,33 @@ function AboutCardPreview({ onImageChange }) {
   // Sin los puntitos del carrusel de Instagram de abajo (gridCut.crop, como en la página).
   const crop = project.gridCut?.crop || [0, 0, 1, 1];
   const photoW = colW * ABOUT_CARD.photoSpan + PAGE.gap * (ABOUT_CARD.photoSpan - 1);
-  const photoH = photoW * mediaAspect(image.key) * (crop[3] - crop[1]);
+  // Mismo encuadre que el WebGL del About (AboutPaper): caja con la proporción
+  // de gridCut.ratio y el recorte cubriéndola con el foco gridCut.focus. Así,
+  // al hacer click, la foto pasa al About sin salto.
+  const ratio = project.gridCut?.ratio || 1.25;
+  const focus = project.gridCut?.focus ?? -0.6;
+  const photoH = photoW * ratio;
+  const imgAspect = mediaAspect(image.key); // alto / ancho
+  const cropH = crop[3] - crop[1];
+  const cropW = crop[2] - crop[0];
+  let imgW;
+  let imgLeft;
+  let imgTop;
+  if ((imgAspect * cropH) / cropW > ratio) {
+    // Más alta que la caja: ancho completo, se recorta en vertical con el foco.
+    imgW = photoW / cropW;
+    const sy = ratio / ((imgAspect * cropH) / cropW);
+    const v0 = 0.5 - 0.5 * sy + focus * (1 - sy) * 0.5;
+    imgLeft = -crop[0] * imgW;
+    imgTop = -(crop[1] + v0 * cropH) * imgW * imgAspect;
+  } else {
+    // Más ancha: alto completo, centrada en horizontal.
+    const imgH = photoH / cropH;
+    imgW = imgH / imgAspect;
+    const sx = (cropW * imgW) / photoW;
+    imgLeft = -(crop[0] + ((1 - 1 / sx) / 2) * cropW) * imgW;
+    imgTop = -crop[1] * imgH;
+  }
   const lineRef = (i) => (el) => {
     linesRef.current[i] = el;
   };
@@ -346,8 +395,8 @@ function AboutCardPreview({ onImageChange }) {
       className="pointer-events-none absolute"
       style={{ top: frame.top, left: columnLeft(7), width: columnsWidth(6), height: frame.contentHeight, zIndex: 30, color: ink }}
     >
-      <figure className="absolute left-0 top-0 m-0" style={{ width: Math.round(photoW) }}>
-        <div ref={sheetRef} className="overflow-hidden" style={{ height: Math.round(photoH), clipPath: 'inset(100% 0% 0% 0%)' }}>
+      <figure className="absolute left-0 top-0 m-0" style={{ width: photoW }}>
+        <div ref={sheetRef} className="relative overflow-hidden" style={{ height: photoH, clipPath: 'inset(100% 0% 0% 0%)' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             ref={imgRef}
@@ -357,8 +406,15 @@ function AboutCardPreview({ onImageChange }) {
             height={Math.round(photoH)}
             decoding="async"
             draggable={false}
-            className="block h-full w-full object-cover object-top"
-            style={{ transformOrigin: '50% 100%' }}
+            className="absolute block"
+            style={{
+              left: imgLeft,
+              top: imgTop,
+              width: imgW,
+              height: imgW * imgAspect,
+              maxWidth: 'none',
+              transformOrigin: '50% 100%',
+            }}
           />
         </div>
         <figcaption className="whitespace-nowrap" style={{ marginTop: 3, fontSize: 10, lineHeight: '12px' }}>
@@ -379,6 +435,7 @@ function AboutCardPreview({ onImageChange }) {
 
       {/* Misma línea que el speed-slider de los proyectos. */}
       <div
+        ref={metaRef}
         className="absolute left-0 flex w-full items-baseline justify-between gap-4 text-[length:var(--kc-type)]"
         style={{ lineHeight: 1, top: frame.contentHeight - metaH }}
       >
@@ -397,10 +454,10 @@ function AboutCardPreview({ onImageChange }) {
  * Montar con key={projectId}: al cambiar de proyecto se reinicia desde cero.
  * onImageChange(key | null) → para mover el cuadradito de la miniatura en la grid.
  */
-export default function SpeedSlider({ projectId, onImageChange }) {
+export default function SpeedSlider({ projectId, onImageChange, handoff = false }) {
   if (projectId === 'about') {
     const AboutPreview = ABOUT_PREVIEW === 'exposure' ? AboutExposurePreview : AboutCardPreview;
-    return <AboutPreview onImageChange={onImageChange} />;
+    return <AboutPreview onImageChange={onImageChange} handoff={handoff} />;
   }
   return <ProjectSpeedSlider projectId={projectId} onImageChange={onImageChange} />;
 }
