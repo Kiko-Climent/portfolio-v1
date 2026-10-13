@@ -14,10 +14,12 @@ import { Line, useLineReveal } from './useLineReveal';
 /**
  * About v4 — "Retales de papel" (oct 2026, boceto 07a del canvas).
  *
- * La foto ocupa las cols 9–12 y se ve en 4 retales rectangulares, uno por
- * columna, cada uno con su ancho y su alto (asimétricos). Al pasar el ratón
- * los retales crecen hasta cubrir su columna y medio gutter a cada lado y
- * revelan la foto entera; al salir se vuelven a cortar.
+ * La foto ocupa paper.columns columnas desde paper.startColumn (oct 2026:
+ * 2 columnas, cols 7–8, bajo el contacto del navbar) y cada columna se parte
+ * en paper.split subcolumnas (con medio gutter entre ellas): un retal
+ * rectangular por subcolumna, cada uno con su ancho y su alto (asimétricos).
+ * Al pasar el ratón los retales crecen hasta cubrir su subcolumna y medio
+ * hueco a cada lado y revelan la foto entera; al salir se vuelven a cortar.
  *
  * Cada retal es una hoja de papel: una malla subdividida que se curva en el
  * vertex shader con la misma forma que las hojas del slider (updateCurve de
@@ -31,8 +33,8 @@ import { Line, useLineReveal } from './useLineReveal';
  * y salida: la misma CURTAIN del slider, por retal. Sin WebGL, la foto se
  * pinta entera en un <img>.
  *
- * Datos: projects.about.paper.strips (retales) y projects.about.gridCut
- * (columnas, proporción, recorte, encuadre). La v3 (mercurio) sigue en
+ * Datos: projects.about.paper (columnas, subcolumnas y retales) y
+ * projects.about.gridCut (proporción, recorte, encuadre). La v3 (mercurio) sigue en
  * AboutGridCut; se elige en ProjectImageSliderThreeGrid (ABOUT_LAYOUT).
  */
 
@@ -56,9 +58,18 @@ import { Line, useLineReveal } from './useLineReveal';
  *  shade     sombreado del papel al curvarse (0 = plano)
  *  fov       apertura de la cámara (más = más perspectiva)
  *  reshuffle al separarse, retales nuevos al azar (la primera vez, los de
- *            projects.js): un ancho de cada tipo (fracción de la columna) y
+ *            projects.js): un ancho de cada tipo (fracción de la subcolumna) y
  *            un alto de cada tipo (px para 573 de alto), repartidos al azar
  *  segments  subdivisión de cada hoja (x, y)
+ *  subGap    hueco entre las subcolumnas de una columna (fracción del gutter)
+ *  depth3d   cada retal en su plano, como las hojas del slider: profundidad
+ *            en reposo de cada uno (px para 573 de alto; negativo = al
+ *            fondo), cuánto pasan por delante al unirse (bump), paralaje
+ *            con el ratón (px por cada 100 px de profundidad) y su suavizado.
+ *            random: al repartirse de nuevo, cada retal recibe una
+ *            profundidad de un tipo distinto (cerca, medio, lejos y, a veces,
+ *            muy al fondo: más pequeño). fade: lo lejano se aclara hacia el
+ *            fondo, como una segunda tinta (0 = nada)
  */
 const PAPER = {
   duration: [1.3, 1.0],
@@ -75,14 +86,23 @@ const PAPER = {
   shade: 0.16,
   fov: 33,
   segments: [12, 40],
+  subGap: 0.5,
+  depth3d: {
+    rest: [-90, 40, -200, -30],
+    bump: 60,
+    parallax: 6,
+    ease: 0.06,
+    random: { near: [10, 60], mid: [-60, -130], far: [-170, -280], deep: [-420, -620], deepChance: 0.45 },
+    fade: 0.22,
+  },
   reshuffle: {
     enabled: true,
-    widths: [[0.28, 0.42], [0.5, 0.7], [0.75, 0.9], [1, 1]],
+    widths: [[0.5, 0.62], [0.66, 0.78], [0.82, 0.92], [1, 1]],
     heights: [[330, 380], [400, 450], [460, 510], [520, 573]],
   },
 };
-// Retales por defecto (07a): por columna, [x, ancho] en fracción de la
-// columna (x desde su borde izquierdo) y [arriba, alto] en px para una foto
+// Retales por defecto (07a, sin subcolumnas): por columna, [x, ancho] en
+// fracción de la columna (x desde su borde izquierdo) y [arriba, alto] en px para una foto
 // de 573 px de alto.
 const DEFAULT_STRIPS = [
   [0, 0.43, 72, 440],
@@ -118,6 +138,12 @@ const randomStrips = (n) => {
     return [fx, fw, top, h];
   });
 };
+// Profundidades al azar: una de cada tipo y, a veces, una muy al fondo.
+const randomDepths = (n) => {
+  const { near, mid, far, deep, deepChance } = PAPER.depth3d.random;
+  const kinds = shuffled([near, mid, far, Math.random() < deepChance ? deep : far]);
+  return Array.from({ length: n }, (_, i) => pick(kinds[i % kinds.length]));
+};
 // Lo que el lienzo WebGL desborda la foto por cada lado: la esquina levantada
 // se sale de la foto.
 const MARGIN = 200;
@@ -134,6 +160,8 @@ uniform float uDir;        // 1 al unirse, -1 al separarse
 uniform float uDepth;      // px de profundidad por unidad del slider
 uniform vec4 uShape;       // tilt, bend, grab, curl
 uniform vec2 uLeadTuck;
+uniform float uZ;          // profundidad del retal (px; negativo = al fondo)
+uniform vec2 uParallax;    // paralaje: px por cada 100 px de profundidad
 uniform float uAmp;        // exageración del pliegue
 uniform vec3 uPinch;       // lados, arriba/abajo, cuenco
 uniform float uExpel;      // pliegue al separarse respecto al de unirse
@@ -173,7 +201,9 @@ void main() {
   p.x += -nx * side * uPinch.x * uRect.z * 0.5 * pull;
   p.y += ny * across * uPinch.y * uRect.w * 0.5 * pull;
   z += -dirK * across * side * uPinch.z * uDepth * pull;
-  vec3 world = vec3(p.x + uMargin - uCanvas.x * 0.5, uCanvas.y * 0.5 - (p.y + uMargin), z);
+  vec3 world = vec3(p.x + uMargin - uCanvas.x * 0.5, uCanvas.y * 0.5 - (p.y + uMargin), z + uZ);
+  // Paralaje: lo que está al fondo se desplaza con el ratón; z = 0 no se mueve.
+  world.xy -= uParallax * world.z / 100.0;
   vPos = world;
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }
@@ -189,6 +219,8 @@ uniform float uReveal;      // cortina de entrada: 0 → 1 (sube desde abajo)
 uniform float uHide;        // cortina de salida: 0 → 1 (se va por arriba)
 uniform float uZoom;
 uniform float uShade;
+uniform float uFade;       // 0 → 1: lo lejano se aclara hacia el fondo
+uniform float uBgTone;     // 1 = fondo blanco, 0 = negro (modo oscuro)
 varying vec2 vQ;
 varying vec3 vPos;
 
@@ -213,18 +245,22 @@ void main() {
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));
   vec3 L = normalize(vec3(-0.35, 0.45, 1.0));
   float shade = 1.0 + uShade * (dot(n, L) - L.z) * 2.0;
-  gl_FragColor = vec4(col.rgb * shade, 1.0);
+  gl_FragColor = vec4(mix(col.rgb * shade, vec3(uBgTone), uFade), 1.0);
 }
 `;
 
 export default function AboutPaper({ project, shouldHide = false, onSceneReady, onTextReady }) {
   const { isDarkMode } = useDarkMode();
+  // Tono del fondo para el WebGL (lo lejano se aclara hacia él).
+  const bgRef = useRef(1);
+  bgRef.current = isDarkMode ? 0 : 1;
   const ink = isDarkMode ? '#ffffff' : '#000000';
   const mutedInk = isDarkMode ? PAGE.mutedDark : PAGE.muted;
 
-  const { services = [], bio = [], gridCut = {} } = project;
-  const columns = gridCut.columns || 4;
-  const startColumn = gridCut.startColumn || PAGE.columns - columns + 1;
+  const { services = [], bio = [], gridCut = {}, paper = {} } = project;
+  // La foto: paper.columns desde paper.startColumn (si no, las de gridCut).
+  const columns = paper.columns || gridCut.columns || 4;
+  const startColumn = paper.startColumn || gridCut.startColumn || PAGE.columns - columns + 1;
   const src = mediaSrc(mediaKey(project, 1), 'lg');
 
   const rootRef = useRef(null);
@@ -293,6 +329,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
 
     const crop = gridCut.crop || [0, 0, 1, 1];
     let cuts = project.paper?.strips || DEFAULT_STRIPS;
+    const split = project.paper?.split || 1;
+    let depths = [...PAPER.depth3d.rest];
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(PAPER.fov, 1, 1, 10000);
     const geometry = new THREE.PlaneGeometry(1, 1, ...PAPER.segments);
@@ -313,6 +351,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       uPinch: { value: new THREE.Vector3(...PAPER.pinch) },
       uExpel: { value: PAPER.expel },
       uShade: { value: PAPER.shade },
+      uParallax: { value: new THREE.Vector2() },
+      uBgTone: { value: 1 },
     };
     // Estado por retal: progreso 0 (cortado) → 1 (entero) que anima GSAP,
     // pliegue y retardo de la esquina, dirección y cortina.
@@ -326,6 +366,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
         uReveal: { value: 0 },
         uHide: { value: 0 },
         uZoom: { value: CURTAIN.zoomFrom },
+        uZ: { value: 0 },
+        uFade: { value: 0 },
       };
       const material = new THREE.ShaderMaterial({
         vertexShader: VERTEX,
@@ -345,12 +387,19 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
     const layout = (b) => {
       const k = b.height / 573;
       const gap = PAGE.gap;
+      // Cada columna se parte en `split` subcolumnas; un retal por subcolumna.
+      const subGap = split > 1 ? gap * PAPER.subGap : 0;
+      const subW = (b.colW - subGap * (split - 1)) / split;
       geo = cuts.map(([fx, fw, top, h], i) => {
-        const left = i * (b.colW + gap);
-        const L = i === 0 ? 0 : left - gap / 2;
-        const R = i === cuts.length - 1 ? b.width : left + b.colW + gap / 2;
+        const c = Math.floor(i / split);
+        const sub = i % split;
+        const left = c * (b.colW + gap) + sub * (subW + subGap);
+        const before = sub === 0 ? gap : subGap;
+        const after = sub === split - 1 ? gap : subGap;
+        const L = i === 0 ? 0 : left - before / 2;
+        const R = i === cuts.length - 1 ? b.width : left + subW + after / 2;
         return {
-          cut: [left + fx * b.colW, top * k, fw * b.colW, Math.min(b.height - top * k, h * k)],
+          cut: [left + fx * subW, top * k, fw * subW, Math.min(b.height - top * k, h * k)],
           whole: [L, 0, R - L, b.height],
         };
       });
@@ -359,6 +408,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let texture = null;
     let dirty = true;
+    // Ratón en la ventana, de -1 a 1 (para el paralaje).
+    const pointer = { x: 0, y: 0 };
     let last = performance.now();
     const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -390,6 +441,17 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
             r.set(x, y, w, h);
             dirty = true;
           }
+          // Profundidad: cada retal en su plano; al unirse vuelven todos a z = 0
+          // pasando un poco por delante (como la hoja de detalle del slider).
+          const kz = lastBox ? lastBox.height / 573 : 1;
+          const { bump, fade } = PAPER.depth3d;
+          const z = lerp(depths[i % depths.length] * kz, 0, s.p) + bump * kz * Math.sin(Math.PI * s.p);
+          const tint = fade * Math.min(1, Math.max(0, -z / (600 * kz)));
+          if (u.uZ.value !== z || u.uFade.value !== tint) {
+            u.uZ.value = z;
+            u.uFade.value = tint;
+            dirty = true;
+          }
         }
         if (
           u.uFold.value !== s.fold ||
@@ -408,6 +470,19 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
           dirty = true;
         }
       });
+      if (shared.uBgTone.value !== bgRef.current) {
+        shared.uBgTone.value = bgRef.current;
+        dirty = true;
+      }
+      // Paralaje: el ratón desplaza un poco los retales según su profundidad.
+      const par = shared.uParallax.value;
+      const tx = still ? 0 : pointer.x * PAPER.depth3d.parallax;
+      const ty = still ? 0 : -pointer.y * PAPER.depth3d.parallax;
+      if (Math.abs(par.x - tx) > 0.002 || Math.abs(par.y - ty) > 0.002) {
+        const e = 1 - Math.pow(1 - PAPER.depth3d.ease, f);
+        par.set(par.x + (tx - par.x) * e, par.y + (ty - par.y) * e);
+        dirty = true;
+      }
       if (dirty && texture) {
         renderer.render(scene, camera);
         dirty = false;
@@ -426,6 +501,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       camera.updateProjectionMatrix();
       shared.uRes.value.set(b.width, b.height);
       shared.uCanvas.value.set(cw, ch);
+      // Profundidad pensada para una foto de 573 px de alto.
+      shared.uDepth.value = PAPER.depth * (b.height / 573);
       lastBox = b;
       layout(b);
       dirty = true;
@@ -443,6 +520,7 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       // Al separarse desde la foto entera, retales nuevos al azar.
       if (!active && PAPER.reshuffle.enabled && lastBox && strips.every((s) => s.p > 0.98)) {
         cuts = randomStrips(cuts.length);
+        depths = randomDepths(cuts.length);
         layout(lastBox);
       }
       const centers = geo ? geo.map((g) => g.whole[0] + g.whole[2] / 2) : strips.map((_, i) => i);
@@ -502,6 +580,8 @@ export default function AboutPaper({ project, shouldHide = false, onSceneReady, 
       const y = e.clientY - r.top;
       const inside = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
       state.x = x;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
       if (inside !== state.active) setActive(inside);
     };
     const onWindowOut = (e) => {

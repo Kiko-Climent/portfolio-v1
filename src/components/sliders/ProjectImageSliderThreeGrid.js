@@ -13,8 +13,10 @@ import { PROJECT_NAME, gridFileName } from '@/components/data/grid';
 import AboutContactSheet from '@/components/about/AboutContactSheet';
 import AboutGridCut from '@/components/about/AboutGridCut';
 import AboutPaper from '@/components/about/AboutPaper';
+import AboutFold from '@/components/about/AboutFold';
 
 // About de escritorio:
+//   'fold'          → v5 (oct 2026): la foto entera con las esquinas plegadas; al hover se despliega y ondea (WebGL).
 //   'paper'         → v4 (oct 2026): 4 retales rectangulares (cols 9–12) que se unen al hover como hojas de papel (WebGL).
 //   'grid-cut'      → v3 (oct 2026): tiras líquidas (mercurio) en las cols 9–12, se funden al hover (WebGL).
 //   'contact-sheet' → v2 (oct 2026): tira de 12 recortes + ampliada + servicios.
@@ -472,7 +474,11 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
 
     if (isAbout && ABOUT_LAYOUT !== 'stack') {
         const AboutLayout =
-            ABOUT_LAYOUT === 'paper' ? AboutPaper : ABOUT_LAYOUT === 'grid-cut' ? AboutGridCut : AboutContactSheet;
+            {
+                fold: AboutFold,
+                paper: AboutPaper,
+                'grid-cut': AboutGridCut,
+            }[ABOUT_LAYOUT] || AboutContactSheet;
         return (
             <div
                 className="fixed top-0 left-0 w-full h-screen z-10 transition-opacity pointer-events-none"
