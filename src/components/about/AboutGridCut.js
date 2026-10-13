@@ -24,13 +24,19 @@ import { Line, useLineReveal } from './useLineReveal';
  * queda entera en una sola forma que sigue viva:
  * bordes que ondulan y la imagen moviéndose como un líquido muy suave. Mover
  * el ratón rápido empuja el borde cerca del cursor (como el scroll en la
- * referencia). Antes incluso de tocar la foto, el cursor atrae al líquido: a
- * cierta distancia, la tira más cercana saca una lengua que se estira hacia
- * él (la punta lo sigue con retardo, como algo vivo) y se sale de su caja; el
- * lienzo WebGL es más grande que la foto para que quepa.
- * Al salir, la zona fundida se encoge y vuelven las tiras. El
- * radio y la posición siguen al cursor con un muelle (inercia y un pelín de
- * rebote), así que no hay easing con tiempo fijo.
+ * referencia).
+ *
+ * El cursor es un campo (una gaussiana, más alta que ancha) que manda a la
+ * vez en dos cosas, así que nunca se pelean:
+ *  - hinchado: cada tira engorda donde el campo es fuerte, hacia su columna,
+ *    con un tope por debajo de la columna; el último hueco lo cierra el cuello
+ *    suave (smooth-min) entre gotas vecinas. No aparece materia nueva.
+ *  - atracción: cada tira se inclina hacia el cursor (fracción de la
+ *    distancia, nunca lo cruza) y deja de inclinarse cuanto más hinchada está.
+ * La atracción empieza antes de tocar la foto (LIQUID.range). Dentro, el
+ * campo crece hacia el centro y allí la foto se completa (LIQUID.fill).
+ * Posición, fuerza, radio y relleno van con muelles: inercia y un pelín de
+ * rebote, sin easing con tiempo fijo.
  *
  * Todo es un único plano WebGL con un fragment shader: cada tira es un
  * rectángulo redondeado (SDF) que se une con las demás con un smooth-min; el
@@ -46,53 +52,64 @@ import { Line, useLineReveal } from './useLineReveal';
 /**
  * El líquido (px salvo que se diga):
  *  speed     velocidad del tiempo (respirar, ondular, fluir)
- *  edge      cuánto ondula el borde en reposo / extra mientras se funde
- *  flow      cuánto se mueve la imagen dentro en reposo / mientras se funde
+ *  edge      cuánto ondula el borde en reposo / extra cerca del cursor
+ *  flow      cuánto se mueve la imagen dentro en reposo / cerca del cursor
  *  breathe   cuánto cambia el grosor de cada tira (fracción)
  *  drift     cuánto se desplaza cada tira a los lados (fracción de columna)
- *  bridge    suavizado de la unión entre tiras mientras se funden
- *  inset     margen de la forma fundida respecto al lienzo (para que ondule dentro)
- *  radius    esquinas de la forma fundida (las tiras separadas son cápsulas:
- *            empiezan redondas y acaban en una foto casi rectangular)
- *  refraction / blur / glow: solo durante la fusión
+ *  wobble    irregularidad a lo largo de cada tira, viva: cuánto cambia el
+ *            grosor con la altura (fracción), cuánto serpentea el eje (px) y
+ *            lo apretadas que van las ondas (más = más cortas)
+ *  bridge    suavidad máx. del cuello entre gotas junto al cursor (smooth-min)
+ *  inset     margen de la forma entera respecto al lienzo (para que ondule dentro)
+ *  radius    esquinas de la foto entera (las tiras separadas son cápsulas)
+ *  refraction / blur / glow: junto al borde, cerca del cursor y al moverse
  *  push      abolladura máx. del borde al mover el ratón rápido, y su radio
- *  reach     radio de la zona fundida (fracción de la diagonal de la foto) con
- *            el cursor en un borde / en el centro (≥ ~1.1 = foto entera)
- *  reachCurve  cómo crece el radio hacia el centro (más = crece más tarde)
- *  front     ancho del frente blando de la zona (fracción del radio)
- *  spring    muelle del radio: rigidez y amortiguación (< 1 = rebota un poco)
- *  follow    lo rápido que la zona sigue al cursor (más = más pegada)
- *  attract   la lengua que atrae el cursor: distancia a la que empieza (px),
- *            cuánto se estira hacia él (fracción de la distancia), suavizado de
- *            la unión con la tira, grosor en la base y en la punta (px) y lo
- *            rápido que la punta sigue al cursor (menos = más elástica) y la
- *            curva de intensidad con la distancia (< 1 = tira antes y más fuerte)
+ *  reach     sigma del campo del cursor (fracción de la diagonal) con el
+ *            cursor en un borde / en el centro
+ *  reachCurve  cómo crece el campo hacia el centro (más = crece más tarde)
+ *  aspect    alto / ancho del campo (> 1 = sigue la tira en vertical)
+ *  swell     ganancia del hinchado y tope (fracción de su columna; < 1 deja
+ *            que el cuello entre gotas cierre el último hueco)
+ *  lean      cuánto se inclina cada tira hacia el cursor (fracción de la
+ *            distancia; < 1 = nunca lo cruza)
+ *  carry     cuánto viaja la foto con la tira al inclinarse (0 = se queda)
+ *  fill      centralidad (0 borde … 1 centro) donde la foto empieza a
+ *            completarse / ya está entera: todo lo que quede dentro del
+ *            segundo valor es zona "real" (0.4 ≈ el 60 % central de la foto)
+ *  range     distancia (px) fuera de la foto a la que el cursor empieza a atraer
+ *  spring    muelles [rigidez, amortiguación (< 1 = rebota un poco)] del
+ *            radio del campo, de su fuerza y del relleno
+ *  follow    lo rápido que el campo sigue al cursor (más = más pegado)
  */
 const LIQUID = {
-  speed: 0.32,
-  edge: [7, 9],
-  flow: [3, 9],
-  breathe: 0.18,
-  drift: 0.06,
+  speed: 0.45,
+  edge: [9, 6],
+  flow: [3, 7],
+  breathe: 0.26,
+  drift: 0.1,
+  wobble: [0.38, 10, 0.006],
   bridge: 46,
   inset: 12,
   radius: 6,
-  refraction: 14,
-  blur: 2.5,
-  glow: 0.18,
+  refraction: 9,
+  blur: 1.5,
+  glow: 0.16,
   push: [16, 80],
-  reach: [0.14, 1.12],
-  reachCurve: 2.4,
-  front: 0.35,
-  spring: [12, 0.85],
+  reach: [0.15, 0.55],
+  reachCurve: 1.6,
+  aspect: 1.4,
+  swell: [1.4, 0.82],
+  lean: 0.5,
+  carry: 0.35,
+  fill: [0.12, 0.4],
+  range: 160,
+  spring: { radius: [12, 0.85], strength: [10, 0.75], fill: [7, 0.9] },
   follow: 5,
-  // Desactivada (oct 2026): con el cursor dentro de la foto las lenguas de
-  // todas las tiras rasgaban la imagen. Se deja el código por si se retoma.
-  attract: { enabled: false, range: 260, reach: 0.9, smooth: 40, base: 24, tip: 6, follow: 3.2, curve: 0.75 },
 };
-// Lo que el lienzo WebGL desborda la foto por cada lado: sitio para la lengua
-// si está activa; si no, solo un poco para que el borde ondule sin cortarse.
-const MARGIN = LIQUID.attract.enabled ? Math.round(LIQUID.attract.range * 0.9) : 24;
+// Lo que el lienzo WebGL desborda la foto por cada lado: sitio para que las
+// tiras se inclinen hacia un cursor que aún está fuera y para que el borde
+// ondule sin cortarse.
+const MARGIN = 48;
 // Única excepción al tipo único: los servicios (~44 px a 1440).
 const SERVICES_TYPE = 'clamp(1.75rem, 3.05vw, 3.5rem)';
 
@@ -111,16 +128,17 @@ uniform vec2 uTexSize;
 uniform vec2 uRes;          // px CSS de la foto
 uniform vec2 uCanvas;       // px CSS del lienzo (la foto + uMargin por cada lado)
 uniform float uMargin;
-uniform vec2 uTip;          // punta de la lengua (cursor con retardo), px de la foto
-uniform vec4 uAttract;      // distancia, estirado, suavizado, intensidad 0 → 1
-uniform vec3 uTent;         // grosor de la lengua en la base y en la punta, curva de intensidad
 uniform vec4 uCrop;         // zona útil de la foto en uv (x0, y0, x1, y1), y desde abajo
 uniform float uFocus;       // -1 arriba … 0 centro … 1 abajo (encuadre vertical del cover)
 uniform float uColW;
 uniform float uGutter;
-uniform float uRadius;      // radio de la zona fundida alrededor del cursor (px)
+uniform float uRadius;      // sigma del campo del cursor (px, en horizontal)
+uniform float uStr;         // fuerza del campo 0 → 1 (cerca / dentro de la foto)
+uniform float uFill;        // 0 → 1: la foto se completa (cursor hacia el centro)
+uniform vec4 uField;        // aspecto del campo, ganancia y tope del hinchado, inclinación
+uniform float uCarry;       // cuánto viaja la foto con la tira inclinada
+uniform vec3 uWobble;       // irregularidad a lo largo: grosor, eje (px), frecuencia
 uniform float uAct;         // 0 → 1 según cuánto se mueve (radio o cursor)
-uniform float uFront;       // ancho del frente blando (fracción del radio)
 uniform vec2 uMouse;        // px, y desde arriba
 uniform float uPush;        // 0 → 1 según la velocidad del ratón
 uniform float uTime;
@@ -198,75 +216,68 @@ void main() {
   float stepW = uColW + uGutter;
   float t = uTime;
 
-  // Progreso local: fundido dentro del radio alrededor del cursor, con un
-  // frente blando (la mitad exterior del radio) donde pasa la acción.
-  float dm = length(px - uMouse);
-  float lp = uRadius < 1.0 ? 0.0 : 1.0 - smoothstep(uRadius * (1.0 - uFront), uRadius, dm);
-  float bell = sin(3.14159265 * lp);
-  // Refracción, desenfoque y brillo solo en el frente y mientras se mueve:
-  // quieto, la foto se ve limpia aunque esté a medio fundir.
-  float fx = bell * uAct;
+  // Campo del cursor: una gaussiana (más alta que ancha). Es la única fuente
+  // del hinchado, la atracción y los efectos de borde.
+  vec2 sig = max(vec2(uRadius, uRadius * uField.x), vec2(1.0));
+  vec2 dq = (px - uMouse) / sig;
+  float gp = uStr * exp(-0.5 * dot(dq, dq));
+  float live = 1.0 - uFill;
+  // Refracción, desenfoque y brillo: cerca del cursor, más al moverse; con la
+  // foto entera desaparecen.
+  float fx = gp * live * (0.35 + 0.65 * uAct);
 
-  // Forma: unión suave de una caja redondeada por tira. Separadas, cada una
-  // con su grosor (que respira) y su deriva; fundidas, cubren su columna y su
-  // gutter y se solapan, dejando una sola forma con margen uShape.w.
+  // Forma: unión suave de una caja redondeada por tira. Cada tira se hincha
+  // hacia su columna y se inclina hacia el cursor según el campo a su altura;
+  // el cuello entre vecinas se ablanda cerca del cursor. Con uFill = 1 cubren
+  // columna y gutter y queda una sola forma con margen uShape.w.
   float inset = uShape.w;
-  float k = mix(1.0, uShape.z, max(bell, lp * 0.5));
+  float k = max(1.0, uShape.z * gp * (1.0 - uFill * 0.85));
+  float soft = max(k * 0.5, 8.0);
   float d = 1e5;
   float offSum = 0.0;
+  float leanSum = 0.0;
   float wSum = 0.0;
-  float tw = 0.0;       // cuánto manda la lengua en este píxel
-  vec2 tq = px;         // de dónde saca la imagen la lengua (estirada desde la tira)
   for (int i = 0; i < N; i++) {
     float fi = float(i);
     float c = fi * stepW + uColW * 0.5;
     float breathe = 1.0 + uShape.x * sin(t * (1.6 + 0.37 * fi) + fi * 2.1);
     float hw = uColW * 0.5 * uW[i] * breathe;
-    float drift = sin(t * (0.9 + 0.23 * fi) + fi * 4.7) * uColW * uShape.y;
-    float l = mix(c + drift - hw, i == 0 ? inset : fi * stepW - uGutter * 0.5 - 12.0, lp);
-    float r = mix(c + drift + hw, i == N - 1 ? uRes.x - inset : fi * stepW + uColW + uGutter * 0.5 + 12.0, lp);
-    float top = mix(uTop[i], inset, lp);
-    float bot = mix(uRes.y - uBot[i], uRes.y - inset, lp);
+    float cx = c + sin(t * (0.9 + 0.23 * fi) + fi * 4.7) * uColW * uShape.y;
+    // Irregular a lo largo: el grosor y el eje ondulan con la altura y se
+    // mueven solos (unas zonas finas, otras gruesas). Se alisa al completarse.
+    hw *= 1.0 + uWobble.x * live * 2.0 * (fbm(vec2(px.y * uWobble.z + fi * 13.1, t * 0.45 + fi * 3.0)) - 0.5);
+    cx += uWobble.y * live * 2.0 * (fbm(vec2(px.y * uWobble.z * 0.7 + fi * 7.7 + 40.0, t * 0.35)) - 0.5);
+
+    // El campo evaluado en el eje de la tira a esta altura: la sección entera
+    // se mueve junta (sin bandas horizontales).
+    vec2 dm = vec2(cx - uMouse.x, px.y - uMouse.y) / sig;
+    float g = uStr * exp(-0.5 * dot(dm, dm));
+    float sl = clamp(g * uField.y, 0.0, 1.0);
+    sl = sl * sl * (3.0 - 2.0 * sl);
+    float sw = max(sl * uField.z, uFill);
+    float lean = (uMouse.x - cx) * uField.w * g * (1.0 - sw) * live;
+
+    float colL = i == 0 ? inset : fi * stepW - uGutter * 0.5 - 12.0 * uFill;
+    float colR = i == N - 1 ? uRes.x - inset : fi * stepW + uColW + uGutter * 0.5 + 12.0 * uFill;
+    float l = mix(cx - hw, colL, sw) + lean;
+    float r = mix(cx + hw, colR, sw) + lean;
+    float top = mix(uTop[i], inset, uFill);
+    float bot = mix(uRes.y - uBot[i], uRes.y - inset, uFill);
     vec2 hb = vec2((r - l) * 0.5, (bot - top) * 0.5);
-    float rad = mix(hb.x, uFx.x, lp); // cápsula → esquina casi recta
+    float rad = mix(hb.x, uFx.x, uFill); // cápsula → esquina casi recta
     float di = sdRoundBox(px - vec2((l + r) * 0.5, (top + bot) * 0.5), hb, rad);
 
-    // Atracción: una lengua líquida que sale de la tira hacia el cursor. Más
-    // larga y gruesa cuanto más cerca; ondula a lo largo; la imagen se estira
-    // desde el borde de la tira.
-    if (uAttract.w > 0.001) {
-      vec2 cp = clamp(uTip, vec2(l, top), vec2(r, bot));
-      vec2 dir = uTip - cp;
-      float dist = length(dir);
-      float s = uAttract.w * pow(1.0 - smoothstep(0.0, uAttract.x, dist), uTent.z);
-      if (s > 0.001 && dist > 0.5) {
-        vec2 nd = dir / dist;
-        vec2 a = cp - nd * 10.0;
-        vec2 b = cp + dir * uAttract.y * s;
-        vec2 pa = px - a;
-        vec2 ba = b - a;
-        float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
-        float rr = mix(mix(4.0, uTent.x, s), uTent.y, h);
-        float wig = (noise(vec2(h * 3.0 + fi * 5.1, t * 5.0)) - 0.5) * 12.0 * s * h;
-        float dtent = length(pa - ba * h - vec2(-nd.y, nd.x) * wig) - rr;
-        float wTent = clamp((di - dtent) / 18.0, 0.0, 1.0) * s;
-        if (wTent > tw) {
-          tw = wTent;
-          tq = cp + (px - cp) * 0.18;
-        }
-        di = smin(di, dtent, uAttract.z * (0.4 + s));
-      }
-    }
-
     d = i == 0 ? di : smin(d, di, k);
-    float w = exp(-max(di, 0.0) / 14.0);
-    offSum += w * uOff[i];
+    // El contenido sigue a la gota más cercana (mezcla suave entre vecinas).
+    float w = exp(-clamp(di, -40.0, 200.0) / soft);
+    offSum += w * uOff[i] * (1.0 - sw);
+    leanSum += w * lean;
     wSum += w;
   }
 
-  // Borde vivo: ruido que lo ondula (más mientras se funde) y abolladura
+  // Borde vivo: ruido que lo ondula (algo más cerca del cursor) y abolladura
   // cerca del cursor cuando el ratón se mueve rápido.
-  d += (fbm(px * 0.0055 + vec2(0.0, t * 0.55)) - 0.5) * 2.0 * (uEdge.x + uEdge.y * bell);
+  d += (fbm(px * 0.0055 + vec2(0.0, t * 0.55)) - 0.5) * 2.0 * (uEdge.x * (1.0 - 0.75 * uFill) + uEdge.y * gp * live);
   vec2 dp = px - uMouse;
   d += uPush * uPushK.x * exp(-dot(dp, dp) / (2.0 * uPushK.y * uPushK.y));
 
@@ -284,14 +295,16 @@ void main() {
   if (hide > 0.001 && px.y > uRes.y * (1.0 - hide)) discard;
   if (alpha <= 0.001) discard;
 
-  // Contenido: desplazamiento de cada tira (se relaja al fundirse), flujo
-  // líquido suave, refracción junto al borde y zoom de la cortina.
-  float off = (offSum / max(wSum, 1e-4)) * (1.0 - lp);
-  float flow = uFlow.x + uFlow.y * fx + uPush * 8.0;
+  // Contenido: desplazamiento de cada tira (se relaja al hincharse), viaja
+  // con la inclinación, flujo líquido suave, refracción junto al borde y zoom
+  // de la cortina.
+  float off = offSum / max(wSum, 1e-4);
+  float drag = leanSum / max(wSum, 1e-4) * uCarry;
+  // Con la foto entera la imagen casi no se mueve: se ve "real".
+  float flow = (uFlow.x + uPush * 8.0) * (1.0 - 0.85 * uFill) + uFlow.y * fx;
   vec2 fl = vec2(fbm(px * 0.004 + vec2(t * 0.3, 0.0)), fbm(px * 0.004 + vec2(7.3, -t * 0.3))) - 0.5;
   float edgeBand = exp(-(d * d) / (2.0 * 14.0 * 14.0));
-  vec2 src = mix(px, tq, tw);
-  vec2 q = vec2(src.x, src.y - off * (1.0 - tw)) + fl * 2.0 * flow - grad * edgeBand * uFx.y * fx;
+  vec2 q = vec2(px.x - drag, px.y - off) + fl * 2.0 * flow - grad * edgeBand * uFx.y * fx;
   vec2 cc = uRes * 0.5;
   q = cc + (q - cc) / zoom;
   vec4 col = sampleCover(q, uFx.z * fx);
@@ -368,7 +381,7 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
-    // El lienzo desborda la foto MARGIN px por cada lado (para la lengua).
+    // El lienzo desborda la foto MARGIN px por cada lado.
     Object.assign(renderer.domElement.style, {
       display: 'block',
       position: 'absolute',
@@ -386,9 +399,6 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
       uRes: { value: new THREE.Vector2(1, 1) },
       uCanvas: { value: new THREE.Vector2(1, 1) },
       uMargin: { value: MARGIN },
-      uTip: { value: new THREE.Vector2(-1e4, -1e4) },
-      uAttract: { value: new THREE.Vector4(LIQUID.attract.range, LIQUID.attract.reach, LIQUID.attract.smooth, 0) },
-      uTent: { value: new THREE.Vector3(LIQUID.attract.base, LIQUID.attract.tip, LIQUID.attract.curve) },
       // projects.js da el recorte con y desde arriba; en la textura va desde abajo.
       uCrop: { value: new THREE.Vector4(crop[0], 1 - crop[3], crop[2], 1 - crop[1]) },
       uFocus: { value: gridCut.focus ?? -0.6 },
@@ -396,7 +406,11 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
       uGutter: { value: PAGE.gap },
       uRadius: { value: 0 },
       uAct: { value: 0 },
-      uFront: { value: LIQUID.front },
+      uStr: { value: 0 },
+      uFill: { value: 0 },
+      uField: { value: new THREE.Vector4(LIQUID.aspect, LIQUID.swell[0], LIQUID.swell[1], Math.min(0.9, LIQUID.lean)) },
+      uCarry: { value: LIQUID.carry },
+      uWobble: { value: new THREE.Vector3(...LIQUID.wobble) },
       uMouse: { value: new THREE.Vector2(0, 0) },
       uTime: { value: 0 },
       uPush: { value: 0 },
@@ -430,12 +444,11 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
     // está vivo siempre (se pinta cada frame); con "reducir movimiento" el
     // tiempo no avanza y solo se pinta cuando algo cambia.
     const strips = Array.from({ length: columns }, () => ({ reveal: 0, hide: 0, zoom: CURTAIN.zoomFrom }));
-    // Zona fundida: radio (fracción de la diagonal) con muelle, y si el cursor
-    // está dentro (o un toque la ha activado).
-    const fuse = { r: 0, v: 0, active: false, act: 0 };
+    // Campo del cursor: radio (fracción de la diagonal), fuerza y relleno, cada
+    // uno con su muelle. `active` = cursor dentro (o un toque); `near` = 0 → 1
+    // al acercarse desde fuera; `ready` = cuando ha terminado la cortina.
+    const fuse = { r: LIQUID.reach[0], v: 0, s: 0, sv: 0, f: 0, fv: 0, active: false, near: 0, ready: false, act: 0 };
     const mouse = { x: 0, y: 0, tx: 0, ty: 0, push: 0, kick: 0 };
-    // Lengua: punta con retardo, intensidad 0 → 1, y si el cursor está en la ventana.
-    const tip = { x: -1e4, y: -1e4, s: 0, on: false, ready: false };
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let texture = null;
     let dirty = true;
@@ -457,51 +470,52 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
       mouse.y += (mouse.ty - mouse.y) * follow;
       u.uMouse.value.set(mouse.x, mouse.y);
 
-      // Radio objetivo: pequeño con el cursor en un borde, la foto entera en el
-      // centro; 0 al salir. El radio lo sigue con un muelle.
+      // Centralidad del cursor: 0 en el borde … 1 en el centro de la foto. Con
+      // forma de rectángulo redondeado (no de círculo), así la zona "real"
+      // sigue la forma de la foto y es amplia.
       const res = u.uRes.value;
       const diag = Math.hypot(res.x, res.y) || 1;
-      let target = 0;
-      if (fuse.active) {
-        const off = Math.hypot(mouse.tx - res.x / 2, mouse.ty - res.y / 2) / (diag / 2);
-        const c = 1 - Math.min(1, off);
-        const eased = Math.pow(c * c * (3 - 2 * c), LIQUID.reachCurve);
-        target = LIQUID.reach[0] + (LIQUID.reach[1] - LIQUID.reach[0]) * eased;
-      }
-      const [stiffness, damping] = LIQUID.spring;
-      const accel = (target - fuse.r) * stiffness - fuse.v * 2 * Math.sqrt(stiffness) * damping;
-      fuse.v += accel * dt;
-      fuse.r = Math.max(0, fuse.r + fuse.v * dt);
-      if (fuse.r < 1e-3 && target === 0) {
-        fuse.r = 0;
-        fuse.v = 0;
-      }
-      // Actividad: cuánto se mueve la zona (radio o cursor), suavizada.
-      const actTarget = fuse.r > 0 ? Math.min(1, Math.abs(fuse.v) * 4 + moved / Math.max(dt, 1e-3) / 900) : 0;
+      const cu = Math.abs(mouse.tx / (res.x || 1) - 0.5) * 2;
+      const cv = Math.abs(mouse.ty / (res.y || 1) - 0.5) * 2;
+      const c = fuse.active ? 1 - Math.min(1, Math.pow(cu ** 4 + cv ** 4, 0.25)) : 0;
+      const smooth = (a, b, v) => {
+        const x = Math.min(1, Math.max(0, (v - a) / (b - a)));
+        return x * x * (3 - 2 * x);
+      };
+      const spring = (val, vel, target, [stiffness, damping]) => {
+        const accel = (target - val) * stiffness - vel * 2 * Math.sqrt(stiffness) * damping;
+        const v = vel + accel * dt;
+        return [val + v * dt, v];
+      };
+      const on = fuse.ready && !hiddenRef.current;
+      // Radio: pequeño en un borde (o fuera), grande en el centro.
+      const eased = Math.pow(smooth(0, LIQUID.fill[1], c), LIQUID.reachCurve);
+      const rTarget = LIQUID.reach[0] + (LIQUID.reach[1] - LIQUID.reach[0]) * eased;
+      [fuse.r, fuse.v] = spring(fuse.r, fuse.v, rTarget, LIQUID.spring.radius);
+      // Fuerza: empieza a `range` px de la foto y es 1 dentro.
+      const sTarget = on ? Math.max(fuse.near, fuse.active ? 1 : 0) : 0;
+      [fuse.s, fuse.sv] = spring(fuse.s, fuse.sv, sTarget, LIQUID.spring.strength);
+      // Relleno: la foto se completa hacia el centro.
+      const fTarget = on && fuse.active ? smooth(LIQUID.fill[0], LIQUID.fill[1], c) : 0;
+      [fuse.f, fuse.fv] = spring(fuse.f, fuse.fv, fTarget, LIQUID.spring.fill);
+      const str = still ? sTarget : Math.min(1.2, Math.max(0, fuse.s));
+      const fill = still ? fTarget : Math.min(1, Math.max(0, fuse.f));
+
+      // Actividad: cuánto se mueve el campo (radio o cursor), suavizada.
+      const actTarget = str > 0.01 ? Math.min(1, Math.abs(fuse.v) * 4 + moved / Math.max(dt, 1e-3) / 900) : 0;
       fuse.act += (actTarget - fuse.act) * (1 - Math.exp(-dt * 4));
-      if (Math.abs(u.uAct.value - fuse.act) > 1e-3) {
+      const changed =
+        Math.abs(u.uAct.value - fuse.act) > 1e-3 ||
+        Math.abs(u.uStr.value - str) > 1e-4 ||
+        Math.abs(u.uFill.value - fill) > 1e-4 ||
+        Math.abs(u.uRadius.value - fuse.r * diag) > 0.05;
+      if (changed) {
         u.uAct.value = still ? 0 : fuse.act;
-        dirty = true;
-      }
-      if (Math.abs(u.uRadius.value - fuse.r * diag) > 0.05) {
+        u.uStr.value = str;
+        u.uFill.value = fill;
         u.uRadius.value = fuse.r * diag;
         dirty = true;
       }
-      // Lengua: la punta persigue al cursor con retardo (elástica); la
-      // intensidad sube al entrar el cursor en la ventana y baja al salir.
-      const att = LIQUID.attract;
-      const tipTarget = att.enabled && tip.on && tip.ready && !hiddenRef.current ? 1 : 0;
-      tip.s += (tipTarget - tip.s) * (1 - Math.exp(-dt * 3));
-      if (tip.s < 0.01) {
-        tip.x = mouse.tx;
-        tip.y = mouse.ty;
-      } else {
-        const tf = 1 - Math.exp(-dt * att.follow);
-        tip.x += (mouse.tx - tip.x) * tf;
-        tip.y += (mouse.ty - tip.y) * tf;
-      }
-      u.uTip.value.set(tip.x, tip.y);
-      u.uAttract.value.w = still ? 0 : tip.s;
 
       mouse.kick *= 0.86;
       mouse.push += (mouse.kick - mouse.push) * 0.18;
@@ -581,7 +595,7 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
         gsap.to(strips, { reveal: 1, zoom: 1, delay, duration: CURTAIN.duration, ease: CURTAIN.ease, stagger: CURTAIN.stagger });
         gsap.delayedCall(delay + (columns - 1) * CURTAIN.stagger + CURTAIN.duration * CURTAIN.readyAt, () => {
           if (cancelled) return;
-          tip.ready = true;
+          fuse.ready = true;
           onSceneReady?.();
           reveal();
         });
@@ -594,21 +608,26 @@ export default function AboutGridCut({ project, shouldHide = false, onSceneReady
       }
     );
 
-    // El ratón se sigue en toda la ventana: la lengua reacciona antes de tocar
-    // la foto, y la fusión empieza al entrar en ella.
+    // El ratón se sigue en toda la ventana: las tiras se inclinan hacia él
+    // antes de tocar la foto, y se completa al llegar al centro.
     const onWindowMove = (e) => {
       if (e.pointerType === 'touch') return;
       const r = holder.getBoundingClientRect();
       const x = e.clientX - r.left;
       const y = e.clientY - r.top;
       const inside = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
-      setOrigin(x, y, inside && !fuse.active && fuse.r === 0);
+      // Distancia a la foto (0 dentro) → cuánto atrae desde fuera.
+      const out = Math.hypot(Math.max(0, -x, x - r.width), Math.max(0, -y, y - r.height));
+      const n = Math.min(1, Math.max(0, 1 - out / LIQUID.range));
+      fuse.near = n * n * (3 - 2 * n);
+      // Si el campo estaba apagado, aparece ya en el cursor (sin viajar desde
+      // donde se quedó).
+      setOrigin(x, y, fuse.s < 0.02);
       if (inside !== fuse.active) setActive(inside);
-      tip.on = true;
     };
     const onWindowOut = (e) => {
       if (e.relatedTarget) return;
-      tip.on = false;
+      fuse.near = 0;
       setActive(false);
     };
     window.addEventListener('pointermove', onWindowMove);

@@ -12,13 +12,15 @@ import { PAGE, columnsWidthPx } from '@/lib/pageGrid';
 import { PROJECT_NAME, gridFileName } from '@/components/data/grid';
 import AboutContactSheet from '@/components/about/AboutContactSheet';
 import AboutGridCut from '@/components/about/AboutGridCut';
+import AboutPaper from '@/components/about/AboutPaper';
 
 // About de escritorio:
-//   'grid-cut'      → v3 (oct 2026): la foto cortada por las cols 7–12, se recompone al hover (WebGL).
+//   'paper'         → v4 (oct 2026): 4 retales rectangulares (cols 9–12) que se unen al hover como hojas de papel (WebGL).
+//   'grid-cut'      → v3 (oct 2026): tiras líquidas (mercurio) en las cols 9–12, se funden al hover (WebGL).
 //   'contact-sheet' → v2 (oct 2026): tira de 12 recortes + ampliada + servicios.
 //   'stack'         → v1: la foto 3 veces en vertical + bio abajo a la izquierda.
 // Para volver a una versión anterior basta con cambiar este valor.
-const ABOUT_LAYOUT = 'grid-cut';
+const ABOUT_LAYOUT = 'paper';
 
 gsap.registerPlugin(SplitText);
 
@@ -469,7 +471,8 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
     };
 
     if (isAbout && ABOUT_LAYOUT !== 'stack') {
-        const AboutLayout = ABOUT_LAYOUT === 'grid-cut' ? AboutGridCut : AboutContactSheet;
+        const AboutLayout =
+            ABOUT_LAYOUT === 'paper' ? AboutPaper : ABOUT_LAYOUT === 'grid-cut' ? AboutGridCut : AboutContactSheet;
         return (
             <div
                 className="fixed top-0 left-0 w-full h-screen z-10 transition-opacity pointer-events-none"

@@ -198,6 +198,17 @@ export const projects = {
         'When I\'m not coding, you\'ll find me following football or basketball, listening to music, or diving into sci-fi films. My work is heavily inspired by brutalism, minimalism, Asian culture, and the raw aesthetics of the 90s.',
       ],
       services: ['Creative development', 'Interactive 2D & 3D', 'Motion design', 'Editorial websites'],
+      // About v4 (retales de papel, boceto 07a): un retal por columna,
+      // [x, ancho] en fracción de la columna (x desde su borde izquierdo) y
+      // [arriba, alto] en px para una foto de 573 px de alto.
+      paper: {
+        strips: [
+          [0, 0.43, 72, 440],
+          [0, 1, 0, 512],
+          [0.29, 0.71, 128, 445],
+          [0, 0.84, 24, 352],
+        ],
+      },
       // About v3 (grid cut).
       gridCut: {
         // Columnas que ocupa la foto (una tira por columna) y dónde empieza.
@@ -211,9 +222,9 @@ export const projects = {
         // Encuadre vertical del cover: -1 arriba, 0 centro, 1 abajo.
         focus: -0.6,
         // Tiras separadas (px pensados para una foto de 573 de alto):
-        // grosor de cada una (fracción de su columna; respira ±18 %),
+        // grosor de cada una (fracción de su columna; respira y ondula),
         // margen arriba/abajo de su forma y desplazamiento de su contenido.
-        widths: [0.42, 0.72, 0.52, 0.66],
+        widths: [0.28, 0.84, 0.4, 0.64],
         tops: [34, 0, 72, 16],
         bottoms: [12, 58, 0, 40],
         offsets: [18, -26, 34, -12],
