@@ -41,6 +41,18 @@ export function colLeftPx(column, viewportWidth) {
  * ([data-navbar]) más un rowGap. Encima queda la hoja anterior, pasando por
  * debajo del navbar en difference.
  */
+/**
+ * Como mobileAnchorPx, pero bajo las tres líneas de la cabecera aunque el
+ * contacto del About esté visible (lo usa el Index, que se abre encima).
+ */
+export function mobileHeadAnchorPx() {
+  if (typeof document === 'undefined') return MOBILE_GRID.fallbackAnchor;
+  const head = document.querySelector('[data-navbar] [data-navbar-head]');
+  const rect = head?.getBoundingClientRect();
+  if (!rect?.height) return mobileAnchorPx();
+  return Math.round(rect.bottom + MOBILE_GRID.rowGap);
+}
+
 export function mobileAnchorPx() {
   if (typeof document === 'undefined') return MOBILE_GRID.fallbackAnchor;
   const navbar = document.querySelector('[data-navbar]');

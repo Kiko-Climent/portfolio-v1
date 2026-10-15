@@ -1,0 +1,248 @@
+'use client';
+
+/**
+ * [Copia con el About anterior (foto + un solo texto abajo). Guardada por si se vuelve a él.]
+ * Detalle móvil v2.
+ *   Proyecto: SliderThree4Mobile solo con sus imágenes (mismo papel y misma
+ *   cortina que la v1) + la hoja Info (InfoSheetMobile), que abre el footer.
+ *   El nombre del proyecto y el contador viven ahora en el navbar
+ *   (NavbarLoaderMobNew2); aquí ya no hay bloque de texto abajo.
+ *   About: foto (columnas 3–4, cortina clip-path de abajo arriba) + el texto de
+ *   siempre por líneas con máscara, con "AllThatJazz" resaltado y "back home".
+ * Versión anterior: ProjectImageSliderMobile.js.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { SplitText } from 'gsap/SplitText';
+import { useDarkMode } from '@/contexts/DarkModeContext';
+import SliderThree4Mobile from '@/components/SliderThree/SliderThree4Mobile';
+import InfoSheetMobile from '@/components/mobile/InfoSheetMobile';
+import { MOBILE_GRID, colLeftPx, colsWidthPx, mobileAnchorPx } from '@/lib/mobileGrid';
+import { mediaAspect, mediaKey, mediaSrc } from '@/lib/media';
+import { indexHandoff } from '@/lib/indexHandoff';
+
+gsap.registerPlugin(SplitText);
+
+// Mismo reveal por líneas que la v1 / el bloque de info de escritorio.
+const INFO_ANIM = {
+    cushion: '0.2em',
+    fromYPercent: 130,
+    duration: 0.9,
+    ease: 'power4.out',
+    stagger: 0.09,
+    delay: 0.12,
+    out: { yPercent: -130, duration: 0.5, ease: 'power3.in', stagger: 0.05 },
+};
+// Cortina de la foto del About: la misma de las imágenes (clip-path de abajo arriba).
+const PHOTO_CURTAIN = { duration: 1.1, ease: 'expo.out', zoomFrom: 1.12, outDuration: 0.5, outEase: 'power3.in' };
+
+const HIGHLIGHT = /(AllThatJazz)/i;
+
+export default function ProjectImageSliderMobile2({ project, shouldHide = false, infoOpen = false, onInfoClose }) {
+    const { isDarkMode } = useDarkMode();
+    const isAbout = project?.id === 'about';
+    const images = project?.slider?.images ?? [];
+    const text = project?.slider?.text;
+
+    const [anchorPx] = useState(() => mobileAnchorPx());
+    // Relevo desde el Index: arranca en la portada y deja su hoja al póster.
+    const [handoffImageId] = useState(() => (project?.id ? indexHandoff.armedImage(project.id) : null));
+    const [viewportWidth] = useState(() => (typeof window === 'undefined' ? 390 : window.innerWidth));
+
+    const textRef = useRef(null);
+    const photoRef = useRef(null);
+    const splitRef = useRef(null);
+
+    const ink = isDarkMode ? 'white' : 'black';
+    const muted = isDarkMode ? '#9ca3af' : '#6b7280';
+
+    // ── About: entrada (foto + líneas) ──────────────────────────────────
+    useEffect(() => {
+        if (!isAbout || !textRef.current) return undefined;
+        let split;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const timer = setTimeout(() => {
+            if (!textRef.current) return;
+            split = new SplitText(textRef.current, { type: 'lines', mask: 'lines', linesClass: 'info-line' });
+            splitRef.current = split;
+            split.lines.forEach((line) => {
+                const wrap = line.parentElement;
+                if (!wrap) return;
+                // La máscara tiene que recortar: si no, las líneas suben todas
+                // juntas y se ve el bloque entero desplazándose.
+                wrap.style.overflow = 'clip';
+                wrap.style.paddingBottom = INFO_ANIM.cushion;
+                wrap.style.marginBottom = `-${INFO_ANIM.cushion}`;
+            });
+            textRef.current.style.visibility = 'visible';
+            const photo = photoRef.current;
+            if (reduceMotion) {
+                gsap.set(split.lines, { yPercent: 0 });
+                if (photo) gsap.set(photo, { clipPath: 'inset(0% 0% 0% 0%)' });
+                return;
+            }
+            if (photo) {
+                const img = photo.querySelector('img');
+                gsap.fromTo(
+                    photo,
+                    { clipPath: 'inset(100% 0% 0% 0%)' },
+                    { clipPath: 'inset(0% 0% 0% 0%)', duration: PHOTO_CURTAIN.duration, ease: PHOTO_CURTAIN.ease }
+                );
+                if (img) {
+                    gsap.fromTo(
+                        img,
+                        { scale: PHOTO_CURTAIN.zoomFrom, transformOrigin: '50% 100%' },
+                        { scale: 1, duration: PHOTO_CURTAIN.duration, ease: PHOTO_CURTAIN.ease }
+                    );
+                }
+            }
+            gsap.fromTo(
+                split.lines,
+                { yPercent: INFO_ANIM.fromYPercent },
+                {
+                    yPercent: 0,
+                    duration: INFO_ANIM.duration,
+                    ease: INFO_ANIM.ease,
+                    stagger: INFO_ANIM.stagger,
+                    delay: INFO_ANIM.delay,
+                    force3D: true,
+                }
+            );
+        }, 60);
+        return () => {
+            clearTimeout(timer);
+            if (split?.revert) split.revert();
+            splitRef.current = null;
+        };
+    }, [isAbout, project?.id]);
+
+    // ── About: salida al volver (el footer espera a __mobileInfoHidden) ──
+    useEffect(() => {
+        if (!isAbout || !shouldHide) return;
+        const lines = splitRef.current?.lines;
+        const done = () => {
+            if (textRef.current) textRef.current.style.visibility = 'hidden';
+            window.__mobileInfoHidden?.();
+        };
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!lines || reduceMotion) {
+            done();
+            return;
+        }
+        gsap.killTweensOf(lines);
+        const stagger = Math.min(INFO_ANIM.out.stagger, 0.35 / Math.max(lines.length - 1, 1));
+        if (photoRef.current) {
+            gsap.to(photoRef.current, {
+                clipPath: 'inset(0% 0% 100% 0%)',
+                duration: PHOTO_CURTAIN.outDuration,
+                ease: PHOTO_CURTAIN.outEase,
+            });
+        }
+        gsap.to(lines, {
+            yPercent: INFO_ANIM.out.yPercent,
+            duration: INFO_ANIM.out.duration,
+            ease: INFO_ANIM.out.ease,
+            stagger,
+            force3D: true,
+            onComplete: done,
+        });
+    }, [shouldHide, isAbout]);
+
+    const handleBack = useCallback(() => window.__footerMobileRequestBack?.(), []);
+
+    const aboutParts = useMemo(() => (isAbout && text?.description ? text.description.split(HIGHLIGHT) : []), [isAbout, text]);
+
+    if (!project || !project.slider || !images.length || !text) return null;
+
+    if (isAbout) {
+        const key = mediaKey(project, 1);
+        const photoW = colsWidthPx(2, viewportWidth);
+        const photoH = Math.round(photoW * mediaAspect(key));
+        const photoLeft = colLeftPx(3, viewportWidth) - MOBILE_GRID.pad;
+        return (
+            <div className="absolute inset-0 w-full h-full" style={{ zIndex: 20 }}>
+                <div
+                    className="absolute left-4 right-4 flex flex-col"
+                    style={{
+                        zIndex: 30,
+                        bottom: 'calc(1rem + max(var(--mobile-bottom-inset, 0px), env(safe-area-inset-bottom, 0px)))',
+                    }}
+                >
+                    <div style={{ marginLeft: photoLeft, width: photoW, marginBottom: MOBILE_GRID.rowGap }}>
+                        <div ref={photoRef} style={{ overflow: 'hidden', clipPath: 'inset(100% 0% 0% 0%)' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={mediaSrc(key, 'sm')}
+                                alt="Kiko Climent"
+                                width={Math.round(photoW)}
+                                height={photoH}
+                                style={{ display: 'block', width: photoW, height: photoH, objectFit: 'cover' }}
+                            />
+                        </div>
+                        <span
+                            className="block tabular-nums font-normal"
+                            style={{
+                                marginTop: MOBILE_GRID.captionGap,
+                                fontSize: MOBILE_GRID.captionSize,
+                                lineHeight: `${MOBILE_GRID.captionLine}px`,
+                                color: ink,
+                            }}
+                        >
+                            about.jpg
+                        </span>
+                    </div>
+                    {/* Mismo bloque que la v1: el propio texto lleva el tamaño, el scroll y la visibilidad. */}
+                    <div
+                        ref={textRef}
+                        className="text-[length:var(--kc-type-mobile-2)] font-semibold"
+                        style={{
+                            visibility: 'hidden',
+                            lineHeight: 'var(--kc-leading-mobile-2)',
+                            maxHeight: `calc(100dvh - ${anchorPx + photoH + MOBILE_GRID.captionGap + MOBILE_GRID.captionLine + MOBILE_GRID.rowGap}px - 1rem)`,
+                            overflowY: 'auto',
+                            overscrollBehavior: 'contain',
+                        }}
+                    >
+                        {/* Los trozos del texto van como hermanos, sin anidar: con un
+                            span dentro de otro, SplitText junta varias líneas en una
+                            y el texto entraba en bloque. */}
+                        <span style={{ color: ink }}>{text.title}</span>{' '}
+                        {aboutParts.map((part, i) => (
+                            <span key={i} className="lowercase" style={{ color: HIGHLIGHT.test(part) ? ink : muted }}>
+                                {part}
+                            </span>
+                        ))}{' '}
+                        <button
+                            type="button"
+                            className="inline cursor-pointer underline-offset-2 hover:opacity-80"
+                            style={{ color: ink }}
+                            onClick={handleBack}
+                        >
+                            back home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="absolute inset-0 w-full h-full" style={{ zIndex: 20 }}>
+            {/* Al volver no se desmonta de golpe: sus hojas salen con la cortina
+                mientras sale la barra, y la Home entra con la suya. */}
+            <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25, pointerEvents: shouldHide ? 'none' : 'auto' }}>
+                <SliderThree4Mobile
+                    images={images}
+                    project={project}
+                    anchorPx={anchorPx}
+                    variant="detail"
+                    hiding={shouldHide}
+                    startImageId={handoffImageId}
+                    handoffImageId={handoffImageId}
+                />
+            </div>
+            <InfoSheetMobile project={project} open={infoOpen && !shouldHide} onClose={onInfoClose} />
+        </div>
+    );
+}

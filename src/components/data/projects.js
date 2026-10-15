@@ -51,7 +51,7 @@ export const projects = {
     johnny: {
       id: 'johnny',
       // Ficha móvil v2 (hoja Info). Borrador: revisar textos, rol, año y stack.
-      info: { summary: 'Immersive portfolio for an analog photographer. An infinite canvas, an orbital view and a paper slider pulled from its corner.', role: 'Design & development', year: '2026', stack: 'Next.js, three.js, GSAP, Tailwind' },
+      info: { summary: 'Immersive portfolio for an analog photographer. An infinite canvas, an orbital view and a paper slider pulled from its corner.', role: 'Design & development', year: '2025', stack: 'Next.js, three.js, GSAP, Tailwind' },
       imagesPath: '/johnny',
       imagesCount: 13,
       gridLayout: [null, null, 1, null, null, 2,
@@ -101,7 +101,7 @@ export const projects = {
     alt: {
       id: 'alt',
       // Ficha móvil v2 (hoja Info). Borrador: revisar textos, rol, año y stack.
-      info: { summary: 'Booking site for a Madrid agency that curates and develops electronic music projects. Dark, red-accented and built around the roster.', role: 'Design & development', year: '2026', stack: 'Next.js, Firebase, Tailwind' },
+      info: { summary: 'Booking site for a Madrid agency that curates and develops electronic music projects. Dark, red-accented and built around the roster.', role: 'Design & development', year: '2025', stack: 'Next.js, Firebase, Tailwind' },
       imagesPath: '/alt',
       imagesCount: 7,
       gridLayout: [],

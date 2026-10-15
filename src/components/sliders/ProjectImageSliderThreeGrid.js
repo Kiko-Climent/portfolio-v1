@@ -15,6 +15,7 @@ import AboutGridCut from '@/components/about/AboutGridCut';
 import AboutPaper from '@/components/about/AboutPaper';
 import AboutFold from '@/components/about/AboutFold';
 import { aboutHandoff } from '@/lib/aboutHandoff';
+import { capFirst, parseInfo } from '@/lib/projectInfo';
 
 // About de escritorio:
 //   'fold'          → v5 (oct 2026): la foto entera con las esquinas plegadas; al hover se despliega y ondea (WebGL).
@@ -67,38 +68,8 @@ const CAPTION_ANIM = {
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
-/**
- * Ficha del proyecto (abajo-izquierda), sacada de project.slider.text sin
- * inventar datos: la description se parte en Client (primer término),
- * Scope (el resto) y Stack (las tecnologías conocidas), y Web es la url.
- * Para afinar los textos, editar las descriptions en projects.js.
- */
-const TECH = {
-    'next.js': 'Next.js', javascript: 'JavaScript', javascriptt: 'JavaScript', gsap: 'GSAP',
-    'framer motion': 'Framer Motion', 'three.js': 'Three.js', shaders: 'Shaders', vercel: 'Vercel',
-    tailwindcss: 'Tailwind CSS', 'motion ui': 'Motion UI', firebase: 'Firebase',
-    responsive: 'Responsive', 'headless tech': 'Headless',
-};
-const capFirst = (str) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : str);
-function parseInfo(text) {
-    const terms = (text?.description || '')
-        .split(',')
-        .map((t) => t.trim().replace(/[.,]+$/, ''))
-        .filter(Boolean);
-    const stack = [];
-    const rest = [];
-    terms.forEach((t) => {
-        const tech = TECH[t.toLowerCase()];
-        if (tech) {
-            if (!stack.includes(tech)) stack.push(tech);
-        } else rest.push(t);
-    });
-    return {
-        client: capFirst(rest[0] || ''),
-        scope: capFirst(rest.slice(1).join(', ').toLowerCase()),
-        stack: stack.join(', '),
-    };
-}
+// Ficha del proyecto (abajo-izquierda): Client / Scope / Stack / Web, desde
+// lib/projectInfo (la misma que la hoja Info móvil).
 
 // Red de seguridad: si algo no llega a cargar, "back menu" aparece igualmente.
 const READY_FALLBACK_MS = 5000;
@@ -463,6 +434,7 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
         : [
             <span key="name" data-split className="block">{projectName}</span>,
             info.client ? row('Client', info.client, 'client') : null,
+            project.info?.year ? row('Year', project.info.year, 'year') : null,
             info.scope ? row('Scope', info.scope, 'scope') : null,
             info.stack ? row('Stack', info.stack, 'stack') : null,
             webLink ? row('Web', webLink, 'web') : null,

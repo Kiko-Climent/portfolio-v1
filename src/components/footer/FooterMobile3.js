@@ -6,13 +6,14 @@
  *     Izquierda: "01/05 Johnny Carretes ··· Open →", el proyecto de la hoja
  *     que está en el ancla (sliderBus 'active'); cambia con un rodillo por
  *     carácter al deslizar. Toda la franja es zona táctil (44 px).
- *     Derecha: "Index", que abre IndexSheetMobile (tabla de contenidos).
+ *     Derecha: "Index →", que abre IndexSheetMobile (tabla de contenidos).
  *   Índice abierto: la barra pasa a "← Close · 05 entries".
- *   Detalle: "Index · Info +". "Index" abre el índice encima del proyecto (con
+ *   Detalle: "← Index · Info +". "Index" abre el índice encima del proyecto (con
  *   ese proyecto seleccionado); "← Close" vuelve al mismo proyecto y elegir
  *   otro cambia de proyecto sin pasar por la Home (onProjectSwitch).
  *   Home: siempre "Kiko Climent" en la cabecera (window.__footerMobileRequestBack).
- *   About: sin barra ("back home" está en el texto), como en la v2.
+ *   About: "← Index", igual que en el detalle (abre el índice encima del About,
+ *   con About marcado). Antes no había barra y "back home" iba en el texto.
  * Los cambios de barra usan la misma máscara por caracteres que la v2.
  * Versión anterior (lista de 5 títulos a tamaño índice): FooterMobile2.js.
  */
@@ -24,7 +25,9 @@ import { useDarkMode } from '@/contexts/DarkModeContext';
 import { sliderBus } from '@/lib/sliderBus';
 import { MOBILE_GRID } from '@/lib/mobileGrid';
 import { PROJECT_NAME, pad2 } from '@/components/data/grid';
-import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobile';
+// Index 6c (índice corrido + contactos): IndexSheetMobile.
+// import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobile';
+import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobileAccordion';
 
 gsap.registerPlugin(SplitText);
 
@@ -109,7 +112,10 @@ const setInfoHiddenCallback = (fn) => {
 };
 const getInfoHiddenCallback = () => window.__mobileInfoHidden;
 
-export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpen = false, onInfoToggle }) {
+// onIndexOpen / onIndexClose: avisan a la cabecera ("Index"). Al abrir un
+// proyecto desde el Index no se llama a onIndexClose: page.js cierra el estado
+// cuando el proyecto nuevo se monta, así la cabecera pasa directa de "Index" a él.
+export default function FooterMobile3({ onProjectClick, onProjectSwitch, onIndexOpen, onIndexClose, infoOpen = false, onInfoToggle }) {
   const { isDarkMode } = useDarkMode();
 
   const groupRefs = useRef({});
@@ -276,15 +282,7 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
 
     const tl = gsap.timeline();
     hideGroup(from, tl, 0);
-    if (isAbout) {
-      tl.call(() => setStrip(false), null, 0.2);
-      tl.call(() => {
-        busyRef.current = false;
-        window.__footerAnimationComplete?.();
-      });
-      return;
-    }
-    showGroup('detail', tl, ANIM.inAt, () => {
+    showGroup(isAbout ? 'about' : 'detail', tl, ANIM.inAt, () => {
       busyRef.current = false;
       window.__footerAnimationComplete?.();
     });
@@ -292,14 +290,15 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
 
   const openIndex = () => {
     const from = modeRef.current;
-    if (busyRef.current || (from !== 'home' && from !== 'detail')) return;
+    if (busyRef.current || (from !== 'home' && from !== 'detail' && from !== 'about')) return;
     busyRef.current = true;
-    const overProject = from === 'detail';
+    const overProject = from === 'detail' || from === 'about';
     modeRef.current = overProject ? 'detailIndex' : 'index';
     // Encima de un proyecto, el índice arranca en ese proyecto.
     setIndexStart(overProject ? currentRef.current : activeRef.current);
     if (overProject && infoOpenRef.current) onInfoToggle?.();
     setIndexOpen(true);
+    onIndexOpen?.();
     const tl = gsap.timeline();
     hideGroup(from, tl, 0);
     showGroup('index', tl, 0.25, () => {
@@ -321,14 +320,7 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
     onProjectSwitch?.(id);
     const tl = gsap.timeline();
     hideGroup('index', tl, 0);
-    if (isAbout) {
-      tl.call(() => setStrip(false), null, 0.2);
-      tl.call(() => {
-        busyRef.current = false;
-      });
-      return;
-    }
-    showGroup('detail', tl, ANIM.inAt, () => {
+    showGroup(isAbout ? 'about' : 'detail', tl, ANIM.inAt, () => {
       busyRef.current = false;
     });
   };
@@ -339,11 +331,14 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
     if (from === 'detailIndex') {
       // Vuelta al mismo proyecto, en la misma imagen.
       busyRef.current = true;
-      modeRef.current = 'detail';
+      // Vuelve a lo que había debajo: un proyecto o el About.
+      const under = currentRef.current === 'about' ? 'about' : 'detail';
+      modeRef.current = under;
       setIndexOpen(false);
+      onIndexClose?.();
       const tl = gsap.timeline();
       hideGroup('index', tl, 0);
-      showGroup('detail', tl, 0.25, () => {
+      showGroup(under, tl, 0.25, () => {
         busyRef.current = false;
       });
       return;
@@ -352,6 +347,7 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
     busyRef.current = true;
     modeRef.current = 'home';
     setIndexOpen(false);
+    onIndexClose?.();
     paintHome(false);
     const tl = gsap.timeline();
     hideGroup('index', tl, 0);
@@ -398,6 +394,7 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
     // líneas ya han salido (ProjectImageSliderMobile2 avisa con __mobileInfoHidden).
     if (mode === 'about') {
       modeRef.current = 'returning';
+      hideGroup('about', gsap.timeline(), 0);
       let restored = false;
       const restore = () => {
         if (restored) return;
@@ -481,7 +478,7 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
               aria-haspopup="dialog"
               aria-expanded={indexOpen}
             >
-              <span data-split>Index</span>
+              <span data-split>Index →</span>
             </button>
           </div>
 
@@ -495,10 +492,18 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, infoOpe
             </span>
           </div>
 
+          {/* About: "← Index" (abre el índice encima del About) */}
+          <div ref={(el) => (groupRefs.current.about = el)} className={groupClass} style={{ display: 'none', left: MOBILE_GRID.pad - 12, right: MOBILE_GRID.pad - 12 }}>
+            <button type="button" className={hit} style={hitPad} onClick={openIndex} aria-haspopup="dialog" aria-expanded={indexOpen}>
+              <span data-split>← Index</span>
+            </button>
+          </div>
+
           {/* Detalle de proyecto */}
           <div ref={(el) => (groupRefs.current.detail = el)} className={groupClass} style={{ display: 'none', left: MOBILE_GRID.pad - 12, right: MOBILE_GRID.pad - 12 }}>
+            {/* "← Index", como la vuelta al menú de escritorio. */}
             <button type="button" className={hit} style={hitPad} onClick={openIndex} aria-haspopup="dialog" aria-expanded={indexOpen}>
-              <span data-split>Index</span>
+              <span data-split>← Index</span>
             </button>
             <button type="button" className={hit} style={hitPad} onClick={() => onInfoToggle?.()} aria-expanded={infoOpen}>
               <span data-split>Info</span>

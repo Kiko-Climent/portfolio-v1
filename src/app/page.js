@@ -17,7 +17,9 @@ import { aboutHandoff } from '@/lib/aboutHandoff';
 import NavbarLoaderNew5 from '../../worktrees/NavbarLoaderNew5';
 // Móvil v1: NavbarLoaderMobNew.
 // import NavbarLoaderMobNew from '../../worktrees/NavbarLoaderMobNew';
-import NavbarLoaderMobNew2 from '../../worktrees/NavbarLoaderMobNew2';
+// Móvil v2: NavbarLoaderMobNew2 (sin "Index" en la cabecera).
+// import NavbarLoaderMobNew2 from '../../worktrees/NavbarLoaderMobNew2';
+import NavbarLoaderMobNew3 from '../../worktrees/NavbarLoaderMobNew3';
 import { preloadForIntro, prefetchProject } from '@/lib/preload';
 import {
   LazyComponent,
@@ -39,6 +41,9 @@ export default function Home() {
   // Cambio directo de proyecto desde el footer: la galería actual sale con su
   // cortina (sin que el grid de la home vuelva a aparecer) y entra la nueva.
   const [switchingProject, setSwitchingProject] = useState(false);
+  // Móvil: Index abierto (sobre la Home o un proyecto) → la cabecera dice "Index".
+  // Se cierra a la vez que cambia el proyecto, para que no enseñe el anterior.
+  const [mobileIndexOpen, setMobileIndexOpen] = useState(false);
   const switchTimerRef = useRef(null);
   const [clickedProject, setClickedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -221,6 +226,7 @@ export default function Home() {
 
   const handleProjectClick = (projectId) => {
     if (projectId === null) {
+      setMobileIndexOpen(false);
       setClickedProject(null);
       setShowSlider(false);
       setHideSlider(false); // ⭐ RESETEAR
@@ -255,6 +261,8 @@ export default function Home() {
 
     setMobileLeavingHome(true);
     setTimeout(() => {
+      // La cabecera pasa de "Index" al proyecto a la vez que este se monta.
+      setMobileIndexOpen(false);
       setClickedProject(projectId);
     }, 600);
   };
@@ -286,6 +294,7 @@ export default function Home() {
     setSwitchingProject(true);
     clearTimeout(switchTimerRef.current);
     switchTimerRef.current = setTimeout(() => {
+      setMobileIndexOpen(false);
       setClickedProject(projectId);
       setSwitchingProject(false);
     }, SWITCH_OUT_MS);
@@ -332,11 +341,12 @@ export default function Home() {
     >
       {hasMounted ? (
         isMobile ? (
-          <NavbarLoaderMobNew2
+          <NavbarLoaderMobNew3
             onReady={handleMobileReady}
-            showContact={isAboutSelected}
+            showContact={isAboutSelected && !mobileIndexOpen}
             isReady={assetsReady}
             project={mobileHeaderProject}
+            indexOpen={mobileIndexOpen}
           />
         ) : (
           <NavbarLoaderNew5 onLoadingComplete={handleLoadingComplete} isReady={assetsReady} />
@@ -402,6 +412,8 @@ export default function Home() {
         <FooterMobile3
           onProjectClick={handleProjectClick}
           onProjectSwitch={handleMobileProjectSwitch}
+          onIndexOpen={() => setMobileIndexOpen(true)}
+          onIndexClose={() => setMobileIndexOpen(false)}
           infoOpen={infoOpen}
           onInfoToggle={() => setInfoOpen((open) => !open)}
         />
