@@ -19,6 +19,7 @@ import SliderThree4Mobile from '@/components/SliderThree/SliderThree4Mobile';
 import InfoSheetMobile from '@/components/mobile/InfoSheetMobile';
 import { MOBILE_GRID, colLeftPx, colsWidthPx, mobileAnchorPx } from '@/lib/mobileGrid';
 import { mediaAspect, mediaKey, mediaSrc } from '@/lib/media';
+import { indexHandoff } from '@/lib/indexHandoff';
 
 gsap.registerPlugin(SplitText);
 
@@ -44,6 +45,8 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
     const text = project?.slider?.text;
 
     const [anchorPx] = useState(() => mobileAnchorPx());
+    // Relevo desde el Index: arranca en la portada y deja su hoja al póster.
+    const [handoffImageId] = useState(() => (project?.id ? indexHandoff.armedImage(project.id) : null));
     const [viewportWidth] = useState(() => (typeof window === 'undefined' ? 390 : window.innerWidth));
 
     const textRef = useRef(null);
@@ -228,7 +231,15 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
             {/* Al volver no se desmonta de golpe: sus hojas salen con la cortina
                 mientras sale la barra, y la Home entra con la suya. */}
             <div className="absolute inset-0 w-full h-full" style={{ zIndex: 25, pointerEvents: shouldHide ? 'none' : 'auto' }}>
-                <SliderThree4Mobile images={images} project={project} anchorPx={anchorPx} variant="detail" hiding={shouldHide} />
+                <SliderThree4Mobile
+                    images={images}
+                    project={project}
+                    anchorPx={anchorPx}
+                    variant="detail"
+                    hiding={shouldHide}
+                    startImageId={handoffImageId}
+                    handoffImageId={handoffImageId}
+                />
             </div>
             <InfoSheetMobile project={project} open={infoOpen && !shouldHide} onClose={onInfoClose} />
         </div>

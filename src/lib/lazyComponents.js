@@ -18,6 +18,10 @@ export const loadDesktopSlider = () => import('@/components/sliders/ProjectImage
 // Móvil v1: '@/components/sliders/ProjectImageSliderMobile'.
 // export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile');
 export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile2');
+// Índice móvil v3 (Index 2a): portada en papel WebGL.
+export const loadIndexPoster = () => import('@/components/mobile/IndexPosterPaper');
+// Versión anterior (póster recortado), la usa IndexSheetMobilePoster.js.
+export const loadIndexPosterCrop = () => import('@/components/mobile/IndexPosterPaperCrop');
 
 const modules = new Map();
 

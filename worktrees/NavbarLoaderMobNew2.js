@@ -7,6 +7,7 @@ import { useDarkMode } from '@/contexts/DarkModeContext';
 import RollingCounter from '@/components/mobile/RollingCounter';
 import { PROJECT_NAME } from '@/components/data/grid';
 import { sliderBus } from '@/lib/sliderBus';
+import { indexHandoff } from '@/lib/indexHandoff';
 
 gsap.registerPlugin(SplitText);
 
@@ -628,6 +629,8 @@ const NavbarLoaderMobNew2 = ({ onReady, showContact = false, isReady = true, pro
   const counterWrapRef = useRef(null);
   const headerTlRef = useRef(null);
   const headerInRef = useRef(false);
+  // Proyecto que enseña ahora la cabecera (para pasar de un proyecto a otro desde el Index).
+  const headerIdRef = useRef(null);
   const lastCounterRef = useRef('01 / 01');
   // El proyecto se queda montado mientras la cabecera vuelve a la Home.
   const [shownProject, setShownProject] = useState(null);
@@ -653,9 +656,11 @@ const NavbarLoaderMobNew2 = ({ onReady, showContact = false, isReady = true, pro
   useEffect(() => {
     if (!showNavbarContent) return;
     const entering = !!(project && project.id !== 'about');
-    if (entering === headerInRef.current) return;
     if (entering && shownProject?.id !== project.id) return;
+    const switching = entering && headerInRef.current && headerIdRef.current && headerIdRef.current !== project.id;
+    if (entering === headerInRef.current && !switching) return;
     headerInRef.current = entering;
+    headerIdRef.current = entering ? project.id : null;
 
     const l2 = line2Ref.current;
     const l3 = line3Ref.current;
@@ -669,7 +674,16 @@ const NavbarLoaderMobNew2 = ({ onReady, showContact = false, isReady = true, pro
 
     if (entering) {
       const name = PROJECT_NAME[project.id] ?? project.id;
-      const counterText = `01 / ${pad2(project.slider?.images?.length ?? 0)}`;
+      // Desde el póster del Index la galería arranca en la portada: el contador también.
+      const images = project.slider?.images ?? [];
+      const armed = indexHandoff.armedImage(project.id);
+      const startAt = armed != null ? Math.max(0, images.findIndex((img) => img.id === armed)) : 0;
+      const counterText = `${pad2(startAt + 1)} / ${pad2(images.length)}`;
+      if (switching) {
+        // De un proyecto a otro (desde el Index): los rodillos salen del contador actual.
+        gsap.set(counterWrap, { visibility: 'hidden' });
+        l3.textContent = lastCounterRef.current;
+      }
       tl.add(rollText(l2, l2.textContent || HOME_LINE2, name, reduce), 0);
       tl.add(rollText(l3, l3.textContent || HOME_LINE3, counterText, reduce), 0.05);
       // Cuando el rodillo termina en "01 / 10", el contador vivo ocupa su sitio.

@@ -12,6 +12,9 @@
  *     por lib/sliderBus, sin re-renders de React
  *   - reduce-motion o un móvil que no llega a ~45 fps: sin deformación, mismo layout
  * Texturas: variante "sm" del manifest (640 px de lado mayor), como la v1.
+ * Relevo desde el Index (lib/indexHandoff): con startImageId arranca con esa
+ * imagen en el ancla; con handoffImageId esa hoja no entra con cortina, se
+ * queda reservada y la destapa el póster del Index al aterrizar encima.
  * Versión anterior: SliderThree3Mobile.js (no se toca).
  */
 
@@ -23,6 +26,7 @@ import { createTexture, destroyRenderer } from '@/lib/textures';
 import { gridFileName } from '@/components/data/grid';
 import { MOBILE_GRID, colLeftPx, colsWidthPx } from '@/lib/mobileGrid';
 import { sliderBus } from '@/lib/sliderBus';
+import { indexHandoff } from '@/lib/indexHandoff';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 
 const getPerfProfile = (variant, imageCount) => {
@@ -79,6 +83,8 @@ export default function SliderThree4Mobile({
     onImagesReady,
     hiding = false,
     onHidden,
+    startImageId = null,
+    handoffImageId = null,
 }) {
     const { isDarkMode } = useDarkMode();
     const containerRef = useRef(null);
@@ -450,6 +456,15 @@ export default function SliderThree4Mobile({
             for (let i = 0; i < slideCount; i++) createSlide(i);
             computeLayout();
 
+            // Arranque en una imagen concreta (relevo desde el Index): esa hoja en el ancla.
+            const startIndex = startImageId != null ? Math.max(0, images.findIndex((img) => img.id === startImageId)) : 0;
+            const startPos = startIndex > 0 ? slides[startIndex].userData.offset : 0;
+            currentPosition = startPos;
+            targetPosition = startPos;
+            const handoffIndex = handoffImageId != null ? images.findIndex((img) => img.id === handoffImageId) : -1;
+            const handoffSlide = handoffIndex >= 0 ? slides[handoffIndex] : null;
+            if (handoffSlide) handoffSlide.userData.handoff = true;
+
             // Distancia (en mundo) de la parte de arriba de la hoja al ancla, envuelta
             // alrededor del ancla: negativa = encima (la anterior), positiva = debajo.
             const wrappedRel = (slide, position) => {
@@ -465,7 +480,7 @@ export default function SliderThree4Mobile({
             };
 
             slides.forEach((slide) => {
-                const cy = centerYFor(slide, 0);
+                const cy = centerYFor(slide, startPos);
                 slide.position.y = cy;
                 slide.userData.targetY = cy;
                 slide.userData.currentY = cy;
@@ -485,6 +500,11 @@ export default function SliderThree4Mobile({
             introSlides.forEach((slide) => {
                 slide.userData.intro = true;
             });
+            // La hoja reservada espera al póster: invisible hasta el relevo.
+            if (handoffSlide) {
+                handoffSlide.userData.intro = true;
+                if (!introSlides.includes(handoffSlide)) introSlides.push(handoffSlide);
+            }
 
             let curtainTimeline = null;
             let curtainPlayed = false;
@@ -497,7 +517,7 @@ export default function SliderThree4Mobile({
                     onUpdate: () => keepRendering(120),
                 });
                 introSlides.forEach((slide, i) => {
-                    if (!slide.userData.textureReady) return;
+                    if (!slide.userData.textureReady || slide.userData.handoff) return;
                     slide.userData.reveal = true;
                     const curtain = slide.userData.curtain;
                     curtain.uZoomOrigin.value.set(0.5, 0);
@@ -526,7 +546,7 @@ export default function SliderThree4Mobile({
                 curtainPlayed = true;
                 clearTimeout(curtainFailSafe);
                 introSlides.forEach((slide) => {
-                    if (!slide.userData.textureReady) return;
+                    if (!slide.userData.textureReady || slide.userData.handoff) return;
                     slide.userData.reveal = true;
                     slide.visible = true;
                 });
@@ -539,12 +559,57 @@ export default function SliderThree4Mobile({
 
             const curtainFailSafe = setTimeout(startReveal, 2500);
 
+            // ── Relevo desde el Index ─────────────────────────────────────────
+            let handoffFailSafe = null;
+            const revealHandoff = (withCurtain = false) => {
+                if (!handoffSlide || disposed) return;
+                const d = handoffSlide.userData;
+                if (d.handoffRevealed) return;
+                d.handoffRevealed = true;
+                clearTimeout(handoffFailSafe);
+                d.handoff = false;
+                d.reveal = true;
+                const curtain = d.curtain;
+                if (withCurtain && !reduceMotion) {
+                    curtain.uZoomOrigin.value.set(0.5, 0);
+                    gsap.to(curtain.uClip.value, { y: 1, duration: CURTAIN.duration, ease: CURTAIN.ease, onUpdate: () => keepRendering(120) });
+                    gsap.to(curtain.uZoom, { value: 1, duration: CURTAIN.duration, ease: CURTAIN.ease });
+                } else {
+                    curtain.uClip.value.set(0, 1);
+                    curtain.uZoom.value = 1;
+                }
+                keepRendering(600);
+            };
+            const reportHandoff = (slide) => {
+                const d = slide.userData;
+                const box = containerRef.current?.getBoundingClientRect();
+                const cy = centerYFor(slide, startPos);
+                const rect = {
+                    left: (box?.left ?? 0) + width / 2 + (d.x - d.w / 2) / worldPerPx,
+                    top: (box?.top ?? 0) + height / 2 - (cy + d.h / 2) / worldPerPx,
+                    width: d.w / worldPerPx,
+                    height: d.h / worldPerPx,
+                };
+                const ok = indexHandoff.galleryReady(project.id, { rect, reveal: () => revealHandoff(false) });
+                if (!ok) revealHandoff(true);
+                // Red de seguridad: si el póster no llega, la hoja se destapa sola.
+                else handoffFailSafe = setTimeout(() => indexHandoff.complete(), 4000);
+            };
+            if (handoffSlide) {
+                // Si la textura no llega nunca, que no se quede el hueco vacío.
+                handoffFailSafe = setTimeout(() => revealHandoff(true), 6000);
+            }
+
             onSlideTexture = (slide) => {
+                if (slide.userData.handoff && !slide.userData.handoffReported) {
+                    slide.userData.handoffReported = true;
+                    reportHandoff(slide);
+                }
                 if (!slide.userData.intro || slide.userData.introCounted) return;
                 slide.userData.introCounted = true;
                 introReady += 1;
                 if (!curtainPlayed && introReady >= introSlides.length) startReveal();
-                else if (curtainPlayed) {
+                else if (curtainPlayed && !slide.userData.handoff) {
                     const ref = introSlides.find((s) => s.userData.reveal)?.userData.curtain;
                     if (ref) {
                         slide.userData.curtain.uClip.value.copy(ref.uClip.value);
@@ -892,6 +957,7 @@ export default function SliderThree4Mobile({
             cleanupRef.current = () => {
                 disposed = true;
                 clearTimeout(curtainFailSafe);
+                clearTimeout(handoffFailSafe);
                 clearTimeout(wheelTimer);
                 clearTimeout(momentumTimer);
                 if (curtainTimeline) curtainTimeline.kill();
@@ -943,7 +1009,7 @@ export default function SliderThree4Mobile({
             if (cleanupRef.current) cleanupRef.current();
             cleanupRef.current = null;
         };
-    }, [images, project, variant, navbarHeight, anchorPx]);
+    }, [images, project, variant, navbarHeight, anchorPx, startImageId, handoffImageId]);
 
     return <div ref={containerRef} className="w-full h-full" style={{ cursor: 'grab', touchAction: 'none' }} />;
 }

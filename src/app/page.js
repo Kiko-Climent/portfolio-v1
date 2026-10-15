@@ -6,7 +6,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Footer5 from '@/components/footer/index5';
 // Móvil v1 (lista + título centrado + texto abajo): FooterMobile.
 // import FooterMobile from '@/components/footer/FooterMobile';
-import FooterMobile2 from '@/components/footer/FooterMobile2';
+// Móvil v2 (lista de 5 títulos a tamaño índice, ~25 px): FooterMobile2.
+// import FooterMobile2 from '@/components/footer/FooterMobile2';
+// Móvil v3 ("opción 1", un solo tamaño de texto): barra de una línea + IndexSheetMobile.
+import FooterMobile3 from '@/components/footer/FooterMobile3';
 import PortfolioGridSeven from '@/components/grids/index7';
 import { projects } from '@/components/data/projects';
 import SpeedSlider, { warmSpeedImages } from '@/components/sliders/SpeedSlider';
@@ -272,6 +275,22 @@ export default function Home() {
     }, SWITCH_OUT_MS);
   };
 
+  // Móvil: cambio de proyecto desde el Index abierto encima de un detalle. La
+  // galería actual sale con su cortina y entra la nueva (con el relevo del
+  // póster si viene de él), sin pasar por la Home.
+  const handleMobileProjectSwitch = (projectId) => {
+    if (!clickedProject || !projectId || projectId === clickedProject) return;
+    if (projectId !== 'about') prefetchProject(projectId, { size: 'sm', as: 'texture' });
+    setActiveProject(projectId);
+    setInfoOpen(false);
+    setSwitchingProject(true);
+    clearTimeout(switchTimerRef.current);
+    switchTimerRef.current = setTimeout(() => {
+      setClickedProject(projectId);
+      setSwitchingProject(false);
+    }, SWITCH_OUT_MS);
+  };
+
   useEffect(() => () => clearTimeout(switchTimerRef.current), []);
 
   // Callbacks estables: los loaders no deben recibir una función nueva en cada
@@ -351,9 +370,10 @@ export default function Home() {
         <>
           {isMobile ? (
             <LazyComponent
+              key={selectedProject.id}
               loader={loadMobileSlider}
               project={selectedProject}
-              shouldHide={hideSlider}
+              shouldHide={hideSlider || switchingProject}
               infoOpen={infoOpen}
               onInfoClose={() => setInfoOpen(false)}
             />
@@ -379,8 +399,9 @@ export default function Home() {
       )}
 
       {isMobile && isMobileReady ? (
-        <FooterMobile2
+        <FooterMobile3
           onProjectClick={handleProjectClick}
+          onProjectSwitch={handleMobileProjectSwitch}
           infoOpen={infoOpen}
           onInfoToggle={() => setInfoOpen((open) => !open)}
         />
