@@ -394,11 +394,11 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
     const labelW = columnsWidthPx(1, viewportW);
     // Fila etiqueta | valor: la etiqueta ocupa 1 columna, el valor empieza en
     // la línea de la columna 2 (mismo esquema en slider y en detalle).
-    const row = (label, value, key) => (
+    const row = (label, value, key, style) => (
         <span
             key={key}
             className="grid"
-            style={{ gridTemplateColumns: `${labelW}px minmax(0, 1fr)`, columnGap: PAGE.gap }}
+            style={{ gridTemplateColumns: `${labelW}px minmax(0, 1fr)`, columnGap: PAGE.gap, ...style }}
         >
             <span data-split style={{ color: mutedInk }}>{label}</span>
             <span data-split>{value}</span>
@@ -433,7 +433,9 @@ export default function ProjectImageSliderThree({ project, shouldHide = false, o
         ]
         : [
             <span key="name" data-split className="block">{projectName}</span>,
-            info.client ? row('Client', info.client, 'client') : null,
+            // Note: la frase del proyecto (la misma que la hoja Info móvil), con una línea en blanco debajo.
+            project.info?.summary ? row('Note', project.info.summary, 'note', { marginBottom: '1em' }) : null,
+            info.sector ? row('Sector', info.sector, 'sector') : null,
             project.info?.year ? row('Year', project.info.year, 'year') : null,
             info.scope ? row('Scope', info.scope, 'scope') : null,
             info.stack ? row('Stack', info.stack, 'stack') : null,

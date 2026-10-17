@@ -77,7 +77,7 @@ export const projects = {
         text: {
           title: 'johnnycarretes.com',
           url: 'https://www.johnnycarretes.com/',
-          description: 'analog photography, portfolio, immersive experience, infinite canvas, 3D, creative, web aesthetic, brutalist design, strong immagery, editorial, Next.js, JavaScript, GSAP, Framer Motion, Three.js, Shaders, Vercel, TailwindCSS, Motion UI, Responsive.'
+          description: 'analog photography, portfolio, immersive experience, infinite canvas, 3D, creative, web aesthetic, brutalist design, strong imagery, editorial, Next.js, JavaScript, GSAP, Framer Motion, Three.js, Shaders, Vercel, TailwindCSS, Motion UI, Responsive.'
         }
       },
       hover: {

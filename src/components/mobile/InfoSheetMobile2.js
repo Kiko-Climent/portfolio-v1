@@ -6,8 +6,9 @@
  * imágenes y su texto entra por líneas con máscara (INFO_ANIM, como el bloque
  * de info de escritorio). La barra "← Index · Info −" del footer queda encima,
  * en difference: sobre la hoja sale en negro.
- * v2: la misma ficha que escritorio (Client / Year / Scope / Stack / Web, desde
- * lib/projectInfo), sin la frase: esa solo sale en el Index. La v1
+ * v2: la misma ficha que escritorio (Sector / Year / Scope / Stack / Web, desde
+ * lib/projectInfo) y, encima, la frase del proyecto (Note, project.info.summary),
+ * que ya no sale en el Index (Index E1, solo títulos). La v1
  * (summary, role, year, stack) sigue en InfoSheetMobile.js.
  */
 
@@ -186,8 +187,11 @@ export default function InfoSheetMobile2({ project, open, onClose }) {
 
     const ink = isDarkMode ? '#ffffff' : '#000000';
     const muted = isDarkMode ? MOBILE_GRID.mutedDark : MOBILE_GRID.muted;
+    // Note (la frase que antes salía en el Index) va primero, con una línea en
+    // blanco debajo; luego la ficha de siempre, igual que en escritorio.
     const rows = [
-        ['Client', info.client],
+        ['Note', project.info?.summary],
+        ['Sector', info.sector],
         ['Year', project.info?.year],
         ['Scope', info.scope],
         ['Stack', info.stack],
@@ -215,7 +219,11 @@ export default function InfoSheetMobile2({ project, open, onClose }) {
                     <div
                         key={label}
                         className="grid"
-                        style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', columnGap: MOBILE_GRID.gap }}
+                        style={{
+                            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                            columnGap: MOBILE_GRID.gap,
+                            marginBottom: label === 'Note' ? 'calc(var(--kc-leading-mobile-2) * 1em)' : undefined,
+                        }}
                     >
                         <span data-line style={{ gridColumn: '1 / span 1', color: muted }}>
                             {label}

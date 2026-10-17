@@ -1,6 +1,7 @@
 /**
  * Ficha de un proyecto, sacada de project.slider.text sin inventar datos: la
- * description se parte en Client (primer término), Scope (el resto) y Stack
+ * description se parte en Sector (primer término: a qué se dedica el cliente,
+ * antes "Client"), Scope (el resto) y Stack
  * (las tecnologías conocidas); Web es la url. La usan la ficha de escritorio
  * (ProjectImageSliderThreeGrid) y la hoja Info móvil (InfoSheetMobile2), así
  * enseñan siempre lo mismo. Para afinar los textos, editar las descriptions en
@@ -30,7 +31,7 @@ export function parseInfo(text) {
     } else rest.push(t);
   });
   return {
-    client: capFirst(rest[0] || ''),
+    sector: capFirst(rest[0] || ''),
     scope: capFirst(rest.slice(1).join(', ').toLowerCase()),
     stack: stack.join(', '),
   };

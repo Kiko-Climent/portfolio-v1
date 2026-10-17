@@ -3,13 +3,15 @@
 /**
  * Footer móvil v3 ("opción 1": un solo tamaño de texto en toda la web).
  *   Home: barra de una línea sobre papel sólido (sin difference).
- *     Izquierda: "01/05 Johnny Carretes ··· Open →", el proyecto de la hoja
- *     que está en el ancla (sliderBus 'active'); cambia con un rodillo por
- *     carácter al deslizar. Toda la franja es zona táctil (44 px).
+ *     Izquierda: "01/05 Johnny Carretes", el proyecto de la hoja que está en
+ *     el ancla (sliderBus 'active'); cambia con un rodillo por carácter al
+ *     deslizar. El propio título abre el proyecto (sin "Open →": las flechas
+ *     solo llevan al índice). Toda la franja es zona táctil (44 px).
  *     Derecha: "Index →", que abre IndexSheetMobile (tabla de contenidos).
- *   Índice abierto: la barra pasa a "← Close · 05 entries".
+ *   Índice abierto: la barra pasa a "Close · 05 entries" (sin flecha: las flechas solo
+ *   llevan al índice).
  *   Detalle: "← Index · Info +". "Index" abre el índice encima del proyecto (con
- *   ese proyecto seleccionado); "← Close" vuelve al mismo proyecto y elegir
+ *   ese proyecto seleccionado); "Close" vuelve al mismo proyecto y elegir
  *   otro cambia de proyecto sin pasar por la Home (onProjectSwitch).
  *   Home: siempre "Kiko Climent" en la cabecera (window.__footerMobileRequestBack).
  *   About: "← Index", igual que en el detalle (abre el índice encima del About,
@@ -27,7 +29,10 @@ import { MOBILE_GRID } from '@/lib/mobileGrid';
 import { PROJECT_NAME, pad2 } from '@/components/data/grid';
 // Index 6c (índice corrido + contactos): IndexSheetMobile.
 // import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobile';
-import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobileAccordion';
+// Index 11b (acordeón con frase y miniaturas): IndexSheetMobileAccordion.
+// import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobileAccordion';
+// Index E1 (solo títulos + colofón Location / Local time / Date).
+import IndexSheetMobile, { INDEX_ORDER } from '@/components/mobile/IndexSheetMobileTitles';
 
 gsap.registerPlugin(SplitText);
 
@@ -468,7 +473,6 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, onIndex
             >
               <span ref={countRef} data-split className="tabular-nums" style={{ color: muted }} />
               <span ref={nameRef} data-split style={{ marginLeft: 10 }} />
-              <span data-split style={{ marginLeft: 'auto', paddingLeft: 12 }}>Open →</span>
             </button>
             <button
               type="button"
@@ -485,7 +489,7 @@ export default function FooterMobile3({ onProjectClick, onProjectSwitch, onIndex
           {/* Índice abierto */}
           <div ref={(el) => (groupRefs.current.index = el)} className={groupClass} style={{ display: 'none', left: MOBILE_GRID.pad - 12, right: MOBILE_GRID.pad - 12 }}>
             <button type="button" className={hit} style={hitPad} onClick={closeIndex}>
-              <span data-split>← Close</span>
+              <span data-split>Close</span>
             </button>
             <span className="flex items-center h-11 tabular-nums" style={{ ...hitPad, color: muted }}>
               <span data-split>{`${pad2(INDEX_ORDER.length)} entries`}</span>

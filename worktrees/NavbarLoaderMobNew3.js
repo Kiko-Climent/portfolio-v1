@@ -818,14 +818,14 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
               <h1 ref={titleRef} className="flex" aria-label="Kiko Climent">
                 {renderRollStages('Kiko Climent', titleCharsRef, titleStages)}
               </h1>
-              <div ref={squareAnchorRef} className="w-3 h-3" style={{ visibility: 'hidden', marginLeft: '0.25rem', marginRight: '0.25rem' }} />
+              <div ref={squareAnchorRef} className="w-[clamp(0.65rem,2.72vw,0.7rem)] h-[clamp(0.65rem,2.72vw,0.7rem)]" style={{ visibility: 'hidden', marginLeft: '0.25rem', marginRight: '0.25rem' }} />
               <h2 className="flex" aria-label="Portfolio 2026">
                 {renderRollStages('Portfolio 2026', subtitleCharsRef, subtitleStages)}
               </h2>
             </div>
 
             <div ref={row2Ref} className="flex items-center whitespace-nowrap">
-              <div ref={row2SpacerRef} className="w-3 h-3" style={{ visibility: 'hidden', marginRight: '0.25rem' }} />
+              <div ref={row2SpacerRef} className="w-[clamp(0.65rem,2.72vw,0.7rem)] h-[clamp(0.65rem,2.72vw,0.7rem)]" style={{ visibility: 'hidden', marginRight: '0.25rem' }} />
               <h3 className="flex" aria-label="Creative Frontend Developer">
                 {renderRollStages('Creative Frontend Developer', subtitle2CharsRef, subtitle2Stages)}
               </h3>
@@ -834,13 +834,16 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
         </div>
       )}
 
-      {/* Cuadrado principal: mismo tamaño y posición final que NavbarMobile.js */}
+      {/* Cuadrado principal: posición final como NavbarMobile.js; tamaño en
+          proporción al texto móvil: 0,8 × texto, como en escritorio (13–14 px → 10,4–11,2 px;
+          antes 12 px fijos). El ::before amplía
+          la zona táctil 16 px por lado (≈ 43 px) sin cambiar lo que se ve. */}
       <div
         ref={squareRef}
         onClick={!showLoader ? toggleDarkMode : undefined}
         onMouseEnter={() => !showLoader && setIsHovered(true)}
         onMouseLeave={() => !showLoader && setIsHovered(false)}
-        className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60] font-bold`}
+        className={`fixed w-[clamp(0.65rem,2.72vw,0.7rem)] h-[clamp(0.65rem,2.72vw,0.7rem)] border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} bg-transparent z-[60] font-bold before:absolute before:-inset-4 before:content-['']`}
         style={{
           // opacity: 0 desde el primer render — hasta que el useEffect mide
           // y ancla su posición (anchorTo), este div "fixed" no tiene
@@ -865,7 +868,7 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
           evitar el flash en la esquina antes de que el useEffect le fije top/left. */}
       <div
         ref={square2Ref}
-        className={`fixed w-3 h-3 border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} z-[60] pointer-events-none`}
+        className={`fixed w-[clamp(0.65rem,2.72vw,0.7rem)] h-[clamp(0.65rem,2.72vw,0.7rem)] border-[1.5px] ${isDarkMode ? 'border-white' : 'border-black'} z-[60] pointer-events-none`}
         style={{ opacity: 0, backgroundColor: isDarkMode ? 'white' : 'black', transform: 'translate(-50%, -50%)' }}
       />
 
