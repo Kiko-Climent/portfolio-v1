@@ -6,14 +6,15 @@
  *   cortina que la v1) + la hoja Info (InfoSheetMobile), que abre el footer.
  *   El nombre del proyecto y el contador viven ahora en el navbar
  *   (NavbarLoaderMobNew2); aquí ya no hay bloque de texto abajo.
- *   About (v3, la estructura del About de escritorio): el contacto va en el
- *   navbar; debajo la foto (columnas 3–4, cortina clip-path de abajo arriba),
- *   la bio en párrafos a tamaño texto (el último en gris; para volver, "← Index"
- *   en la barra o "Kiko Climent" en la cabecera) y
- *   "Services" con los servicios a display (el mismo tamaño que en escritorio).
- *   En una sola columna que hace scroll si no cabe (en un iPhone SE no cabe:
- *   anclar los servicios abajo los cortaba). Todo entra y sale por líneas con máscara.
- *   Versión anterior (foto + un solo texto abajo): ProjectImageSliderMobile2AboutText.js.
+ *   About (v5, solo texto): el contacto va en el navbar; debajo la bio en
+ *   párrafos a tamaño texto (el último en gris) y "Services" a display (el
+ *   mismo tamaño que en escritorio), empujados abajo. Sin foto: así cabe la
+ *   bio entera, como en escritorio. Todo entra y sale por líneas con máscara,
+ *   y el contacto del navbar entra a la vez que las líneas (onAboutIntro).
+ *   Versiones anteriores: foto fantasma detrás de la bio
+ *   (ProjectImageSliderMobile2AboutGhost.js), foto en columnas 3–4 encima de
+ *   la bio (ProjectImageSliderMobile2AboutPhoto.js) y foto + un solo texto
+ *   abajo (ProjectImageSliderMobile2AboutText.js).
  * Versión anterior: ProjectImageSliderMobile.js.
  */
 
@@ -25,8 +26,7 @@ import SliderThree4Mobile from '@/components/SliderThree/SliderThree4Mobile';
 // Info v1 (frase + role/year/stack): InfoSheetMobile.
 // import InfoSheetMobile from '@/components/mobile/InfoSheetMobile';
 import InfoSheetMobile from '@/components/mobile/InfoSheetMobile2';
-import { MOBILE_GRID, colLeftPx, colsWidthPx, mobileAnchorPx } from '@/lib/mobileGrid';
-import { mediaAspect, mediaKey, mediaSrc } from '@/lib/media';
+import { MOBILE_GRID, mobileAnchorPx } from '@/lib/mobileGrid';
 import { indexHandoff } from '@/lib/indexHandoff';
 
 gsap.registerPlugin(SplitText);
@@ -41,18 +41,14 @@ const INFO_ANIM = {
     delay: 0.12,
     out: { yPercent: -130, duration: 0.5, ease: 'power3.in', stagger: 0.05 },
 };
-// Cortina de la foto del About: la misma de las imágenes (clip-path de abajo arriba).
-const PHOTO_CURTAIN = { duration: 1.1, ease: 'expo.out', zoomFrom: 1.12, outDuration: 0.5, outEase: 'power3.in' };
 
 // Display: el de los servicios del About de escritorio (SERVICES_TYPE en
 // components/about/*) y del índice. Interlineado y tracking, los mismos.
 const SERVICES_TYPE = 'clamp(1.75rem, 3.05vw, 3.5rem)';
 const SERVICES_LEADING = 0.94;
 const SERVICES_TRACKING = '-0.035em';
-// La foto no pasa de esto: la bio y los servicios caben en una pantalla.
-const ABOUT_PHOTO_MAX_H = 220;
 
-export default function ProjectImageSliderMobile2({ project, shouldHide = false, infoOpen = false, onInfoClose }) {
+export default function ProjectImageSliderMobile2({ project, shouldHide = false, infoOpen = false, onInfoClose, onAboutIntro }) {
     const { isDarkMode } = useDarkMode();
     const isAbout = project?.id === 'about';
     const images = project?.slider?.images ?? [];
@@ -61,17 +57,19 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
     const [anchorPx] = useState(() => mobileAnchorPx());
     // Relevo desde el Index: arranca en la portada y deja su hoja al póster.
     const [handoffImageId] = useState(() => (project?.id ? indexHandoff.armedImage(project.id) : null));
-    const [viewportWidth] = useState(() => (typeof window === 'undefined' ? 390 : window.innerWidth));
 
     const textRef = useRef(null);
     const servicesRef = useRef(null);
-    const photoRef = useRef(null);
     const splitRef = useRef(null);
+    const onAboutIntroRef = useRef(onAboutIntro);
+    useEffect(() => {
+        onAboutIntroRef.current = onAboutIntro;
+    }, [onAboutIntro]);
 
     const ink = isDarkMode ? 'white' : 'black';
     const muted = isDarkMode ? '#9ca3af' : '#6b7280';
 
-    // ── About: entrada (foto + líneas) ──────────────────────────────────
+    // ── About: entrada (contacto del navbar + líneas) ───────────────────
     useEffect(() => {
         if (!isAbout || !textRef.current) return undefined;
         let split;
@@ -95,26 +93,11 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
             });
             textRef.current.style.visibility = 'visible';
             if (servicesRef.current) servicesRef.current.style.visibility = 'visible';
-            const photo = photoRef.current;
+            // El contacto del navbar entra a la vez que las líneas.
+            onAboutIntroRef.current?.(true);
             if (reduceMotion) {
                 gsap.set(split.lines, { yPercent: 0 });
-                if (photo) gsap.set(photo, { clipPath: 'inset(0% 0% 0% 0%)' });
                 return;
-            }
-            if (photo) {
-                const img = photo.querySelector('img');
-                gsap.fromTo(
-                    photo,
-                    { clipPath: 'inset(100% 0% 0% 0%)' },
-                    { clipPath: 'inset(0% 0% 0% 0%)', duration: PHOTO_CURTAIN.duration, ease: PHOTO_CURTAIN.ease }
-                );
-                if (img) {
-                    gsap.fromTo(
-                        img,
-                        { scale: PHOTO_CURTAIN.zoomFrom, transformOrigin: '50% 100%' },
-                        { scale: 1, duration: PHOTO_CURTAIN.duration, ease: PHOTO_CURTAIN.ease }
-                    );
-                }
             }
             gsap.fromTo(
                 split.lines,
@@ -133,6 +116,7 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
             clearTimeout(timer);
             if (split?.revert) split.revert();
             splitRef.current = null;
+            onAboutIntroRef.current?.(false);
         };
     }, [isAbout, project?.id]);
 
@@ -152,13 +136,6 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
         }
         gsap.killTweensOf(lines);
         const stagger = Math.min(INFO_ANIM.out.stagger, 0.35 / Math.max(lines.length - 1, 1));
-        if (photoRef.current) {
-            gsap.to(photoRef.current, {
-                clipPath: 'inset(0% 0% 100% 0%)',
-                duration: PHOTO_CURTAIN.outDuration,
-                ease: PHOTO_CURTAIN.outEase,
-            });
-        }
         gsap.to(lines, {
             yPercent: INFO_ANIM.out.yPercent,
             duration: INFO_ANIM.out.duration,
@@ -175,10 +152,6 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
     if (!project || !project.slider || !images.length || !text) return null;
 
     if (isAbout) {
-        const key = mediaKey(project, 1);
-        const photoW = colsWidthPx(2, viewportWidth);
-        const photoH = Math.min(ABOUT_PHOTO_MAX_H, Math.round(photoW * mediaAspect(key)));
-        const photoLeft = colLeftPx(3, viewportWidth) - MOBILE_GRID.pad;
         const textClass = 'text-[length:var(--kc-type-mobile-2)] font-semibold';
         return (
             <div className="absolute inset-0 w-full h-full" style={{ zIndex: 20 }}>
@@ -198,37 +171,8 @@ export default function ProjectImageSliderMobile2({ project, shouldHide = false,
                         overscrollBehavior: 'contain',
                     }}
                 >
-                    {/* Foto (cols 3–4) con su nombre de archivo */}
-                    <div style={{ marginLeft: photoLeft, width: photoW, flex: 'none' }}>
-                        <div ref={photoRef} style={{ overflow: 'hidden', clipPath: 'inset(100% 0% 0% 0%)' }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={mediaSrc(key, 'sm')}
-                                alt="Kiko Climent"
-                                width={Math.round(photoW)}
-                                height={photoH}
-                                style={{ display: 'block', width: photoW, height: photoH, objectFit: 'cover', objectPosition: '50% 20%' }}
-                            />
-                        </div>
-                        <span
-                            className="block tabular-nums font-normal"
-                            style={{
-                                marginTop: MOBILE_GRID.captionGap,
-                                fontSize: MOBILE_GRID.captionSize,
-                                lineHeight: `${MOBILE_GRID.captionLine}px`,
-                                color: ink,
-                            }}
-                        >
-                            about.jpg
-                        </span>
-                    </div>
-
                     {/* Bio: párrafos a tamaño texto */}
-                    <div
-                        ref={textRef}
-                        className="flex flex-col"
-                        style={{ visibility: 'hidden', flex: 'none', marginTop: MOBILE_GRID.rowGap, gap: '1em' }}
-                    >
+                    <div ref={textRef} className="flex flex-col" style={{ visibility: 'hidden', flex: 'none', gap: '1em' }}>
                         {bio.map((paragraph, i) => {
                             const last = i === bio.length - 1;
                             return (

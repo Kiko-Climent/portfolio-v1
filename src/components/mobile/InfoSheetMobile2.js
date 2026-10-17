@@ -36,6 +36,11 @@ const LINES_ANIM = {
     out: { yPercent: -130, duration: 0.35, ease: 'power3.in', stagger: 0.02 },
 };
 
+// Hueco que deja abajo para la barra del footer (FooterMobile3 → BAR_H). Antes
+// reservaba 54 px y la franja sólida de la barra (56) tapaba los descendentes
+// de la última línea (la de la web).
+const BAR_SPACE = 56;
+
 // Deslizar hacia abajo para cerrar: a partir de esta distancia (o un gesto rápido) se cierra;
 // si no, la hoja vuelve a su sitio.
 const DRAG_CLOSE_PX = 70;
@@ -202,7 +207,7 @@ export default function InfoSheetMobile2({ project, open, onClose }) {
                 lineHeight: 'var(--kc-leading-mobile-2)',
                 backgroundColor: isDarkMode ? '#000000' : '#ffffff',
                 color: ink,
-                padding: `12px ${MOBILE_GRID.pad}px calc(1rem + env(safe-area-inset-bottom, 0px) + 22px + 16px)`,
+                padding: `12px ${MOBILE_GRID.pad}px calc(${BAR_SPACE + MOBILE_GRID.gap}px + env(safe-area-inset-bottom, 0px))`,
             }}
         >
             <div ref={contentRef}>

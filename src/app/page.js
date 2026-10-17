@@ -69,6 +69,9 @@ export default function Home() {
   // FooterMobile.js) para que el contacto del navbar salga a la vez que
   // saldría el título de un proyecto, no ~1s más tarde.
   const [aboutExiting, setAboutExiting] = useState(false);
+  // Móvil: el About ya ha empezado su entrada (las líneas de la bio). El
+  // contacto del navbar espera a esto para entrar a la vez que el texto.
+  const [aboutIntroStarted, setAboutIntroStarted] = useState(false);
   // Móvil v2: hoja "Info" del detalle (la abre/cierra la barra del footer).
   const [infoOpen, setInfoOpen] = useState(false);
   // Móvil v2: la Home cierra sus hojas con la cortina mientras sale el menú.
@@ -166,6 +169,9 @@ export default function Home() {
       setMobileLeavingHome(false);
     }
   }, [clickedProject]);
+
+  // El About avisa al empezar su entrada (true) y al desmontarse (false).
+  const handleAboutIntro = useCallback((started) => setAboutIntroStarted(started), []);
 
   // ⭐ CALLBACK PARA CUANDO TERMINA LA ANIMACIÓN DEL FOOTER (mostrar slider)
   useEffect(() => {
@@ -343,7 +349,7 @@ export default function Home() {
         isMobile ? (
           <NavbarLoaderMobNew3
             onReady={handleMobileReady}
-            showContact={isAboutSelected && !mobileIndexOpen}
+            showContact={isAboutSelected && aboutIntroStarted && !mobileIndexOpen}
             isReady={assetsReady}
             project={mobileHeaderProject}
             indexOpen={mobileIndexOpen}
@@ -386,6 +392,7 @@ export default function Home() {
               shouldHide={hideSlider || switchingProject}
               infoOpen={infoOpen}
               onInfoClose={() => setInfoOpen(false)}
+              onAboutIntro={handleAboutIntro}
             />
           ) : (
             <LazyComponent
