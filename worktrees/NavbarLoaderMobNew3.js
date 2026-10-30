@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { SplitText } from 'gsap/SplitText';
 import { useDarkMode } from '@/contexts/DarkModeContext';
+import { applyRollRow, lockRollRow } from '@/lib/rollRow';
 import RollingCounter from '@/components/mobile/RollingCounter';
 import { PROJECT_NAME } from '@/components/data/grid';
 import { sliderBus } from '@/lib/sliderBus';
@@ -14,7 +15,9 @@ gsap.registerPlugin(SplitText);
 // Mismo efecto "roll" que la versión de escritorio (johnnycarretes.com):
 // cada carácter tiene una fila apilada por etapa (color === null -> oculto;
 // color === string -> visible con ese color) dentro de una máscara de una
-// línea. Avanzar de una etapa a la siguiente es mover el stack "-1em".
+// línea. El salto no es "1em": lockRollRow mide la fila y máscara, etapas
+// y tween usan ese mismo px (src/lib/rollRow.js). Con el tipo en vw, Safari
+// recorta a un píxel distinto del translate y asoma la etapa siguiente.
 const ROLL = {
   inDuration: 0.85,
   inEase: 'expo.out',
@@ -214,6 +217,9 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
   const titleCharsRef = useRef([]); // "Kiko Climent"
   const subtitleCharsRef = useRef([]); // "Portfolio 2026"
   const subtitle2CharsRef = useRef([]); // "Creative Frontend Developer"
+  // Alto de fila ya medido. React vuelve a escribir height: 1em en cada
+  // render; el layout effect lo repone antes de pintar.
+  const rowPxRef = useRef(0);
   const squareRef = useRef(null);
   const squareAnchorRef = useRef(null);
   const square2Ref = useRef(null);
@@ -253,20 +259,39 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     if (isReady) leaveIntroRef.current?.();
   }, [isReady]);
 
+  useLayoutEffect(() => {
+    const row = rowPxRef.current;
+    if (!row) return;
+    applyRollRow(
+      [...titleCharsRef.current, ...subtitleCharsRef.current, ...subtitle2CharsRef.current],
+      row
+    );
+  });
+
   useEffect(() => {
-    if (!titleCharsRef.current.length || !subtitleCharsRef.current.length || !subtitle2CharsRef.current.length) return;
+    if (!titleCharsRef.current.length || !subtitleCharsRef.current.length || !subtitle2CharsRef.current.length) return undefined;
 
     let rotationAnim = null;
     let rotationAnim2 = null;
+    let tl = null;
+    let cancelled = false;
     const timers = [];
     const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
     const allChars = [...titleCharsRef.current, ...subtitleCharsRef.current, ...subtitle2CharsRef.current];
-    gsap.set(allChars, { y: '0em' });
 
-    // 1) Medimos la palabra "Climent" (no solo la "C") en su posición
-    // natural, ANTES de tocar nada más, y desplazamos la fila 2 con un
-    // padding-left real para que el segundo cuadrado quede centrado bajo
+    const start = () => {
+      if (cancelled) return;
+      const row = lockRollRow(allChars);
+      rowPxRef.current = row;
+      const step = row > 0 ? `-=${row}px` : '-=1em';
+      // 2D a propósito: un translate3d hace que Safari rasterice la letra
+      // en una capa cuyo borde no coincide con la máscara.
+      gsap.set(allChars, { y: 0, force3D: false });
+
+    // 1) Medimos la palabra "Climent" (no solo la "C") en horizontal y
+    // desplazamos la fila 2 con un padding-left real para que el segundo
+    // cuadrado quede centrado bajo
     // esa palabra, con aire de sobra antes de "Creative Frontend
     // Developer". Un padding-left ensancha la fila 2 y, como el bloque
     // entero está centrado con flexbox, eso re-centra TODO el bloque
@@ -413,7 +438,7 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
       }, 2350);
     };
 
-    const tl = gsap.timeline();
+    tl = gsap.timeline();
 
     // 1) Aparece el primer cuadrado
     tl.to(squareRef.current, {
@@ -426,7 +451,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       titleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.inDuration,
         ease: ROLL.inEase,
         stagger: ROLL.inStagger,
@@ -440,7 +466,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       titleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.colorDuration,
         ease: ROLL.colorEase,
         stagger: ROLL.colorStagger,
@@ -450,7 +477,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       subtitleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.inDuration,
         ease: ROLL.inEase,
         stagger: ROLL.inStagger,
@@ -464,7 +492,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       subtitle2CharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.inDuration,
         ease: ROLL.inEase,
         stagger: ROLL.inStagger,
@@ -480,7 +509,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       titleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.colorDuration,
         ease: ROLL.colorEase,
         stagger: ROLL.colorStagger,
@@ -490,7 +520,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       subtitleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.colorDuration,
         ease: ROLL.colorEase,
         stagger: ROLL.colorStagger,
@@ -522,7 +553,8 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
     tl.to(
       allChars,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.outDuration,
         ease: ROLL.outEase,
         stagger: ROLL.outStagger,
@@ -552,8 +584,14 @@ const NavbarLoaderMobNew3 = ({ onReady, showContact = false, isReady = true, pro
       }
     }, [], '+=0.3');
 
+    };
+
+    if (document.fonts?.status === 'loaded' || !document.fonts?.ready) start();
+    else document.fonts.ready.then(start);
+
     return () => {
-      tl.kill();
+      cancelled = true;
+      tl?.kill();
       timers.forEach(clearTimeout);
       leaveIntroRef.current = null;
       if (rotationAnim) rotationAnim.stop();

@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useDarkMode } from '@/contexts/DarkModeContext';
 import { PAGE } from '@/lib/pageGrid';
+import { applyRollRow, lockRollRow } from '@/lib/rollRow';
 
 // Efecto "roll" tipo johnnycarretes.com, generalizado a N etapas por
 // carácter: cada carácter tiene una fila apilada por etapa (color === null
 // -> invisible/oculto; color === string -> visible con ese color), dentro
-// de una máscara de una línea (overflow hidden). Avanzar de una etapa a la
-// siguiente es simplemente mover el stack "-1em" hacia arriba — por eso el
-// timeline solo usa valores relativos (y: '-=1em'), nunca absolutos.
+// de una máscara de una línea (overflow hidden). El salto no es "1em":
+// lockRollRow mide la fila y máscara, etapas y tween usan ese mismo px
+// (src/lib/rollRow.js). Si no, con --kc-type en vw Safari recorta a un
+// píxel y asoma la etapa siguiente.
 const ROLL = {
   inDuration: 0.85,
   inEase: 'expo.out',
@@ -80,6 +82,9 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
   const titleCharsRef = useRef([]);
   const subtitleCharsRef = useRef([]);
   const subtitle2CharsRef = useRef([]);
+  // Alto de fila ya medido. React vuelve a escribir height: 1em en cada
+  // render; el layout effect lo repone antes de pintar.
+  const rowPxRef = useRef(0);
   const squareRef = useRef(null);
   const squareAnchorRef = useRef(null);
   const square2Ref = useRef(null);
@@ -109,16 +114,35 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     if (isReady) leaveIntroRef.current?.();
   }, [isReady]);
 
+  useLayoutEffect(() => {
+    const row = rowPxRef.current;
+    if (!row) return;
+    applyRollRow(
+      [...titleCharsRef.current, ...subtitleCharsRef.current, ...subtitle2CharsRef.current],
+      row
+    );
+  });
+
   useEffect(() => {
-    if (!titleCharsRef.current.length || !subtitleCharsRef.current.length || !subtitle2CharsRef.current.length) return;
+    if (!titleCharsRef.current.length || !subtitleCharsRef.current.length || !subtitle2CharsRef.current.length) return undefined;
 
     let rotationAnim = null;
     let rotationAnim2 = null;
+    let tl = null;
+    let cancelled = false;
     const timers = [];
     const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
     const allChars = [...titleCharsRef.current, ...subtitleCharsRef.current, ...subtitle2CharsRef.current];
-    gsap.set(allChars, { y: '0em' });
+
+    const start = () => {
+      if (cancelled) return;
+      const row = lockRollRow(allChars);
+      rowPxRef.current = row;
+      const step = row > 0 ? `-=${row}px` : '-=1em';
+      // 2D a propósito: un translate3d hace que Safari rasterice la letra
+      // en una capa cuyo borde no coincide con la máscara.
+      gsap.set(allChars, { y: 0, force3D: false });
 
     // El cuadrado principal vive fuera del grid (para poder viajar libremente
     // a la esquina más tarde), así que lo anclamos a la posición real de su
@@ -239,7 +263,7 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
       }, 2350);
     };
 
-    const tl = gsap.timeline();
+    tl = gsap.timeline();
 
     // 1) Aparece el primer cuadrado
     tl.to(squareRef.current, {
@@ -252,7 +276,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       titleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.inDuration,
         ease: ROLL.inEase,
         stagger: ROLL.inStagger,
@@ -266,7 +291,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       titleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.colorDuration,
         ease: ROLL.colorEase,
         stagger: ROLL.colorStagger,
@@ -276,7 +302,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       subtitleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.inDuration,
         ease: ROLL.inEase,
         stagger: ROLL.inStagger,
@@ -290,7 +317,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       subtitle2CharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.inDuration,
         ease: ROLL.inEase,
         stagger: ROLL.inStagger,
@@ -306,7 +334,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       titleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.colorDuration,
         ease: ROLL.colorEase,
         stagger: ROLL.colorStagger,
@@ -316,7 +345,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       subtitleCharsRef.current,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.colorDuration,
         ease: ROLL.colorEase,
         stagger: ROLL.colorStagger,
@@ -345,7 +375,8 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
     tl.to(
       allChars,
       {
-        y: '-=1em',
+        y: step,
+        force3D: false,
         duration: ROLL.outDuration,
         ease: ROLL.outEase,
         stagger: ROLL.outStagger,
@@ -375,8 +406,14 @@ const NavbarLoaderNew5 = ({ onLoadingComplete, isReady = true }) => {
       }
     }, [], '+=0.3');
 
+    };
+
+    if (document.fonts?.status === 'loaded' || !document.fonts?.ready) start();
+    else document.fonts.ready.then(start);
+
     return () => {
-      tl.kill();
+      cancelled = true;
+      tl?.kill();
       timers.forEach(clearTimeout);
       leaveIntroRef.current = null;
       if (rotationAnim) rotationAnim.stop();
