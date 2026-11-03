@@ -14,7 +14,10 @@ export const loadWaveImage = () => import('@/components/tools/WaveImage');
 // export const loadBackgroundMobile = () => import('@/components/backgroundMobile/index');
 export const loadBackgroundMobile = () => import('@/components/backgroundMobile/index2');
 // Antes: '@/components/sliders/ProjectImageSliderThree' (slider centrado, sin rejilla).
-export const loadDesktopSlider = () => import('@/components/sliders/ProjectImageSliderThreeGrid');
+// v1 (index5, tira en la col 7 + caption bajo la hoja): ProjectImageSliderThreeGrid.
+// export const loadDesktopSlider = () => import('@/components/sliders/ProjectImageSliderThreeGrid');
+// v2 (index6, "R2·B2": tira al borde + leyenda en el hueco):
+export const loadDesktopSlider = () => import('@/components/sliders/ProjectImageSliderThreeGrid2');
 // Móvil v1: '@/components/sliders/ProjectImageSliderMobile'.
 // export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile');
 export const loadMobileSlider = () => import('@/components/sliders/ProjectImageSliderMobile2');

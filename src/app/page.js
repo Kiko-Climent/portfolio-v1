@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 // Footer anterior (el menú sale y entran título + "back menu"): index3.
 // import Footer3 from '@/components/footer/index3';
-import Footer5 from '@/components/footer/index5';
+// v5 (lista de proyectos siempre visible): footer/index5.
+// import Footer5 from '@/components/footer/index5';
+// v6 ("R3·A2": en un proyecto solo "← Index" + "Next"):
+import Footer6 from '@/components/footer/index6';
 // Móvil v1 (lista + título centrado + texto abajo): FooterMobile.
 // import FooterMobile from '@/components/footer/FooterMobile';
 // Móvil v2 (lista de 5 títulos a tamaño índice, ~25 px): FooterMobile2.
@@ -430,7 +433,7 @@ export default function Home() {
             pointerEvents: isLoadingComplete ? 'auto' : 'none'
           }}
         >
-          <Footer5
+          <Footer6
             activeProject={activeProject}
             onHover={handleFooterHover}
             onProjectClick={handleProjectClick}
