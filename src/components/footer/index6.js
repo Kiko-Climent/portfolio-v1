@@ -351,6 +351,8 @@ export default function Footer6({ activeProject, onHover, onProjectClick, onProj
 
   const full = isDarkMode ? '#ffffff' : '#000000';
   const muted = isDarkMode ? PAGE.mutedDark : PAGE.muted;
+  // Etiqueta de sección ("Projects"): el mismo gris claro que en el índice móvil.
+  const label = isDarkMode ? '#5c5c5c' : '#b3b3b3';
   const lit = openId ? (hoveredId || openId) : (hoveredId || activeProject);
 
   return (
@@ -416,15 +418,26 @@ export default function Footer6({ activeProject, onHover, onProjectClick, onProj
         </div>
 
         <div ref={listRef} className="flex flex-col">
+        {/* Encabezado de la lista, como en el índice móvil. Sale y entra con ella. */}
+        <div
+          aria-hidden="true"
+          style={{ color: label, overflowX: 'visible', overflowY: 'clip', paddingBottom: MASK_CUSHION, marginBottom: `-${MASK_CUSHION}` }}
+        >
+          <div data-row-inner>Projects</div>
+        </div>
         {ITEMS.map(({ title, number, id }) => (
           <div
             key={number}
             role="button"
             tabIndex={0}
-            className="cursor-pointer overflow-clip"
+            className="cursor-pointer"
             style={{
               color: lit && lit !== id ? muted : full,
               transition: 'color 150ms linear',
+              // Máscara solo en vertical (la de la animación): en horizontal
+              // no recorta, así los números no se cortan por la derecha.
+              overflowX: 'visible',
+              overflowY: 'clip',
               paddingBottom: MASK_CUSHION,
               marginBottom: `-${MASK_CUSHION}`,
             }}
@@ -444,7 +457,7 @@ export default function Footer6({ activeProject, onHover, onProjectClick, onProj
           >
             <div data-row-inner className="flex justify-between">
               <h1 className="flex">{title}</h1>
-              <p className="flex w-[2ch] text-right tabular-nums">{number}</p>
+              <p className="flex text-right tabular-nums">{number}</p>
             </div>
           </div>
         ))}
